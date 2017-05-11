@@ -4,9 +4,7 @@
 % Start of text
 \chapter{Introduction}
 
-...\\
-...\\
-...\\
+Focus of this thesis is a performace optimazition of BeakerLib library, particulary its Journal feature. 
 
 \chapter{Relevant projects}
 
@@ -33,7 +31,7 @@ This thesis focuses on BeakerLib Journal and problem it causes with long tests.
 Beaker is a full stack software and hardware integration testing system, with the ability to manage a globally distributed network of test labs.  [citace beaker doc] It is Red Hat community project under GNU General Public License version 2.
 
 Main functionality includes management of hardware inventory, on which Beaker can install wide variety  of operating systems from Red Hat Linux family. Another notable part  is Task library which contains rpm packages of individual tests which can be run on provided machines. 
-Users then can with specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package [link to beaker download page ?? ]. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  After Test Harness finishes running the tests, results are sent back to Beaker where they are stored for specified period of time. 
+Users then can with specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package [link to beaker download page ??? ]. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  After Test Harness finishes running the tests, results are sent back to Beaker where they are stored for specified period of time. 
 
 \subsection{beaker-wizard}
 Part of Beaker package. Interactive command-line tool which automates creation of BeakerLib tests. Using predefined or user-defined templates it creates all files that are needed to run BeakerLib test.
@@ -65,29 +63,40 @@ Relations between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beak
 This chapter explains inner workings of BeakerLib more in-depth, with focus on Journal feature, its problems and proposed optimizations.
 \\
 \\
-As stated earlier BeakerLib is shell-level library with functions that make writing and running tests easier as well as examining their results. BeakerLib divedes tests into logical groups called Phases. There are three basic types of phases:
+As stated earlier BeakerLib is shell-level library with functions that make writing and running tests easier as well as examining their results.
+BeakerLib adds testing functions to \textit{shell} functionality, so user can combine normal \textit{shell} commands and constructions with helping functions which can make writing tests and examing their results easier. There is around 80 of these functions, descriptions of most used ones follows:
+\begin{itemize}
+\item \textbf{rlRun} - First argument of this function is any shell command, which is executed byt rlRun. Second is an expected exit code of first argument, it can contain one or more codes. Third argument is a comment. BeakerLib logs FAIL or PASS if expected exit code differs or not from actual one respectively along with comment. 
+\item \textbf{rlPass} - Manual assertion and logging of PASS. Useful when in combination with if statement which user doesn't want to appear in logs but still wants to log its result. Reciprocal function \textbf{rlFail} exists as well.
+\item \textbf{rlAssertExists} - Asserts whether file given as a first argument exists.
+\item \textbf{rlAssertGrep} - Function logs PASS when pattern given as first argument matches in a file which a second argument. Optional flags are passed to \textit{grep} and behave the same way.
+\item \textbf{rlAssertRpm} - Function asserts PASS when package given as first argument is installed.  Optional arguments allow specifying particular version, release or arch of the package.
+\item \textbf{rlAssertDiffer} - Asserts whether two files given as argument differ in their content. 
+\end{itemize}
+~\\
+BeakerLib divides tests into logical groups called Phases. There are three basic types of phases:
 \begin{itemize}
 \item Setup - preparing conditions for the test (such as creating temporary files, starting needed services and so on)
-\item Phases - logical grouping of test actions, clear separation of setup / test / cleanup
-\item Asserts - common checks affecting the overall results of the individual phases (checking for exit codes, file existence and content...)
-\item Helpers - convenience functions for common operations such as managing services, backup and restore 
+\item Test - main phase for testing
+\item Cleanup - reverting changes made by the test
 \end{itemize}
-
-
+~\\
+\\
 Example of BeakerLib test \ref{lst:test_example} shows ... ... ...
 
 \begin{lstlisting}[style=beakerlib_bash,caption={BeakerLib basic test example},label={lst:test_example}]
 # Include Beaker environment
 . /usr/bin/rhts-environment.sh || exit 1
 . /usr/share/beakerlib/beakerlib.sh || exit 1
-
+# Start of Journal
 rlJournalStart
+    # Start of Setup Phase, creating temp directory where test will take place 
     rlPhaseStartSetup
         rlAssertRpm $PACKAGE
         rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
         rlRun "pushd $TmpDir"
     rlPhaseEnd
-
+   # Start of Test Phase, creating temp directory where test will take place
     rlPhaseStartTest
         rlRun "touch foo" 0 "Creating the foo test file"
         rlAssertExists "foo"
@@ -102,7 +111,7 @@ rlJournalEnd
 \end{lstlisting}
 
 
-\section{More in-depth description ?? }
+\section{More in-depth description ??? }
 
 \section{Journal in-depth}
 
@@ -156,7 +165,7 @@ First environment is local laptop for convenience and speed of execution. I meas
 <table of tech specs>
 
 \subsection{Remote in beaker}
-Second round of testing was done to emulate real testing conditions. I created Beaker recipe containing all performance tests which I submitted to Red Hat beaker server. Only time of execution was measured in remote testing.
+Second round of testing was done to emulate real testing conditions and to verify that changes made to BeakerLib do not break functionality outside of controlled environment. Tests were run with the default test harness Beah. Only overall time of execution of each test was measured in remote testing.
 
 <table of tech specs>
 
