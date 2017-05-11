@@ -1,6 +1,7 @@
 %=========================================================================
 % (c) Michal Bidlo, Bohuslav Křena, 2008
 
+% Start of text
 \chapter{Introduction}
 
 ...\\
@@ -15,12 +16,12 @@ In this chapter describes BeakerLib and projects relevant to it.
 
 BeakerLib is a shell-level integration testing library, providing convenience functions which simplify writing, running and analysis of integration and blackbox tests. 
 It is developed and maintained by Red Hat and operates under GNU General Public License.
+Main features of BeakerLib include:
 \begin{itemize}
-\item Main features of BeakerLib include:
 \item Journal - uniform logging mechanism. 
 \item Phases - logical grouping of test actions, clear separation of setup / test / cleanup
-\item Asserts - common checks affecting the overall results of the individual phases (checking for exit codes, file existence \& content...)
-\item Helpers - convenience functions for common operations such as managing services, backup \& restore 
+\item Asserts - common checks affecting the overall results of the individual phases (checking for exit codes, file existence and content...)
+\item Helpers - convenience functions for common operations such as managing services, backup and restore 
 \end{itemize}
 [citace beakerlib github wiki]
 
@@ -32,7 +33,7 @@ This thesis focuses on BeakerLib Journal and problem it causes with long tests.
 Beaker is a full stack software and hardware integration testing system, with the ability to manage a globally distributed network of test labs.  [citace beaker doc] It is Red Hat community project under GNU General Public License version 2.
 
 Main functionality includes management of hardware inventory, on which Beaker can install wide variety  of operating systems from Red Hat Linux family. Another notable part  is Task library which contains rpm packages of individual tests which can be run on provided machines. 
-Users then can specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package [link to beaker download page ?? ]. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  After Test Harness finishes running the tests, results are sent back to Beaker where they are stored for specified period of time. 
+Users then can with specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package [link to beaker download page ?? ]. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  After Test Harness finishes running the tests, results are sent back to Beaker where they are stored for specified period of time. 
 
 \subsection{beaker-wizard}
 Part of Beaker package. Interactive command-line tool which automates creation of BeakerLib tests. Using predefined or user-defined templates it creates all files that are needed to run BeakerLib test.
@@ -40,13 +41,13 @@ Part of Beaker package. Interactive command-line tool which automates creation o
 \section{Test Harness}
 Test harness is a software framework that automates test execution. It contains tests to be run, executes them and reports results. <expand>
 
-Beaker’s harnesses prepare environment for BeakerLib by setting variables to proper values.
+Beaker’s harnesses prepare provided machine for BeakerLib by setting environmental variables to proper values, and then running the tests.
 
 \subsection{Beah harness}
-Default Beaker harness . <expand> [link to doc]
+Beah [link to doc] is a default Beaker harness . <expand> 
 
 \subsection{Restraint harness}
-Alternative Beaker harness which can, unlike Beah, run with Beaker or standalone without it. <expand> [link to doc]
+Restraint [link to doc] is an alternative Beaker harness which can, unlike Beah, run with Beaker or standalone without it. <expand>
 \\
 \\
 Relations between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beaker_relation}
@@ -61,7 +62,45 @@ Relations between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beak
 
 
 \chapter{BeakerLib}
-This chapter explains inner workings of BeakerLib more in-depth, with focus on Journal feature.
+This chapter explains inner workings of BeakerLib more in-depth, with focus on Journal feature, its problems and proposed optimizations.
+\\
+\\
+As stated earlier BeakerLib is shell-level library with functions that make writing and running tests easier as well as examining their results. BeakerLib divedes tests into logical groups called Phases. There are three basic types of phases:
+\begin{itemize}
+\item Setup - preparing conditions for the test (such as creating temporary files, starting needed services and so on)
+\item Phases - logical grouping of test actions, clear separation of setup / test / cleanup
+\item Asserts - common checks affecting the overall results of the individual phases (checking for exit codes, file existence and content...)
+\item Helpers - convenience functions for common operations such as managing services, backup and restore 
+\end{itemize}
+
+
+Example of BeakerLib test \ref{lst:test_example} shows ... ... ...
+
+\begin{lstlisting}[style=beakerlib_bash,caption={BeakerLib basic test example},label={lst:test_example}]
+# Include Beaker environment
+. /usr/bin/rhts-environment.sh || exit 1
+. /usr/share/beakerlib/beakerlib.sh || exit 1
+
+rlJournalStart
+    rlPhaseStartSetup
+        rlAssertRpm $PACKAGE
+        rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
+        rlRun "pushd $TmpDir"
+    rlPhaseEnd
+
+    rlPhaseStartTest
+        rlRun "touch foo" 0 "Creating the foo test file"
+        rlAssertExists "foo"
+        rlRun "ls -l foo" 0 "Listing the foo test file"
+    rlPhaseEnd
+
+    rlPhaseStartCleanup
+        rlRun "popd"
+    rlPhaseEnd
+rlJournalPrint
+rlJournalEnd
+\end{lstlisting}
+
 
 \section{More in-depth description ?? }
 
@@ -132,5 +171,6 @@ Second round of testing was done to emulate real testing conditions. I created B
 Recap of results
 \\
 Future work
+
 
 %=========================================================================

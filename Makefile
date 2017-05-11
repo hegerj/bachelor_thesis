@@ -5,7 +5,7 @@
 # Edited by: dytrych AT fit vutbr cz
 #===========================================
 # asi budete chtit prejmenovat / you will probably rename:
-CO=projekt
+CO=xheger00-BeakerLib-optimization
 
 all: $(CO).pdf
 

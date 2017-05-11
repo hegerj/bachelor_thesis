@@ -1,3 +1,7 @@
+% TODO CTRL+F: TODO, ??,  SMAZAT
+% TODO poradne si procti projekt.pdf z navod/ Appendix A, jsou tam body co musis udelat
+
+
 %==============================================================================
 % tento soubor pouzijte jako zaklad
 % this file should be used as a base for the thesis
@@ -192,6 +196,41 @@ Uvedl jsem všechny literární prameny a publikace, ze kterých jsem čerpal.}
   \iftwoside
     \cleardoublepage
   \fi
+
+% Listing settings
+\lstset{basicstyle=\ttfamily,
+  morekeywords={rlRun, PACKAGE},
+  showstringspaces=false,
+  commentstyle=\color{red},
+  keywordstyle=\color{blue},
+  numbers=left,
+  stepnumber=1,    
+  firstnumber=1,
+  numberfirstline=true,
+  captionpos=b
+}
+
+\lstdefinestyle{beakerlib_bash}{
+language=bash,
+keywordstyle=\color{blue},
+commentstyle=\color{gray},
+stringstyle=\color{orange},
+numbers=left,
+stepnumber=1,
+numbersep=5pt,
+numberstyle=\tiny,
+breaklines=true,
+breakautoindent=true,
+breakatwhitespace=false,
+postbreak=\space,
+tabsize=2,
+basicstyle=\ttfamily\scriptsize,
+showspaces=false,
+showstringspaces=false,
+extendedchars=true,
+backgroundcolor=\color{white},
+morekeywords={rlRun, rlPhaseStartTest, rlPhaseEnd, rlPhaseStartTest, rlPhaseStartCleanup, rlAssertRpm, rlJournalPrint, rlJournalEnd, rlJournalStart, rlAssertExists, rlPhaseStartSetup}
+ }
 
   % Text prace / Thesis text
   % ----------------------------------------------
