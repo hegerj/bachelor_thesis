@@ -32,7 +32,7 @@ This thesis focuses on BeakerLib Journal and problem it causes with long tests.
 Beaker is a full stack software and hardware integration testing system, with the ability to manage a globally distributed network of test labs.  [citace beaker doc] It is Red Hat community project under GNU General Public License version 2.
 
 Main functionality includes management of hardware inventory, on which Beaker can install wide variety  of operating systems from Red Hat Linux family. Another notable part  is Task library which contains rpm packages of individual tests which can be run on provided machines. 
-Users then can specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package [link to beaker download page?]. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  After Test Harness finishes running the tests, results are sent back to Beaker where they are stored for specified period of time. 
+Users then can specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package [link to beaker download page ?? ]. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  After Test Harness finishes running the tests, results are sent back to Beaker where they are stored for specified period of time. 
 
 \subsection{beaker-wizard}
 Part of Beaker package. Interactive command-line tool which automates creation of BeakerLib tests. Using predefined or user-defined templates it creates all files that are needed to run BeakerLib test.
@@ -61,8 +61,9 @@ Relations between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beak
 
 
 \chapter{BeakerLib}
+This chapter explains inner workings of BeakerLib more in-depth, with focus on Journal feature.
 
-\section{More in-depth description}
+\section{More in-depth description ?? }
 
 \section{Journal in-depth}
 
@@ -72,10 +73,22 @@ Relations between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beak
 
 \subsection{Change in accessing journalling.py}
 
-\subsubsection{Queue file solution}
+\subsection{Queue file solution}
+
+\subsubsection{(Dis)advantages}
+
+\subsubsection{Queue file}
+
+\subsubsection{Escaping}
 
 
-\subsubsection{Daemon-like solution}
+\subsection{Daemon-like solution}
+
+\subsubsection{(Dis)advantages}
+
+\subsubsection{Signals}
+
+\subsubsection{Escaping}
 
 
 
