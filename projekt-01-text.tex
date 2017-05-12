@@ -4,7 +4,7 @@
 % Start of text
 \chapter{Introduction}
 
-Focus of this thesis is a performace optimazition of BeakerLib library, particulary its Journal feature. 
+Focus of this thesis is a performance optimization of BeakerLib library, particularly its Journal feature. 
 
 \chapter{Relevant projects}
 
@@ -64,9 +64,9 @@ This chapter explains inner workings of BeakerLib more in-depth, with focus on J
 \\
 \\
 As stated earlier BeakerLib is shell-level library with functions that make writing and running tests easier as well as examining their results.
-BeakerLib adds testing functions to \textit{shell} functionality, so user can combine normal \textit{shell} commands and constructions with helping functions which can make writing tests and examing their results easier. There is around 80 of these functions, descriptions of most used ones follows:
+BeakerLib adds testing functions to \textit{shell} functionality, so user can combine normal \textit{shell} commands and constructions with helping functions which can make writing tests and examining their results easier. There is around 80 of these functions, descriptions of most used ones follows:
 \begin{itemize}
-\item \textbf{rlRun} - First argument of this function is any shell command, which is executed byt rlRun. Second is an expected exit code of first argument, it can contain one or more codes. Third argument is a comment. BeakerLib logs FAIL or PASS if expected exit code differs or not from actual one respectively along with comment. 
+\item \textbf{rlRun} - First argument of this function is any shell command, which is executed by rlRun. Second is an expected exit code of first argument, it can contain one or more codes. Third argument is a comment. BeakerLib logs FAIL or PASS if expected exit code differs or not from actual one respectively along with comment. This is most used and important function.
 \item \textbf{rlPass} - Manual assertion and logging of PASS. Useful when in combination with if statement which user doesn't want to appear in logs but still wants to log its result. Reciprocal function \textbf{rlFail} exists as well.
 \item \textbf{rlAssertExists} - Asserts whether file given as a first argument exists.
 \item \textbf{rlAssertGrep} - Function logs PASS when pattern given as first argument matches in a file which a second argument. Optional flags are passed to \textit{grep} and behave the same way.
@@ -80,10 +80,8 @@ BeakerLib divides tests into logical groups called Phases. There are three basic
 \item Test - main phase for testing
 \item Cleanup - reverting changes made by the test
 \end{itemize}
-~\\
+This division helps when examining the result of test as it shows which phase causes fail, if any, in BeakerLib's output. Example test \ref{lst:test_example} shows how basic BeakerLib test looks.
 \\
-Example of BeakerLib test \ref{lst:test_example} shows ... ... ...
-
 \begin{lstlisting}[style=beakerlib_bash,caption={BeakerLib basic test example},label={lst:test_example}]
 # Include Beaker environment
 . /usr/bin/rhts-environment.sh || exit 1
@@ -96,24 +94,34 @@ rlJournalStart
         rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
         rlRun "pushd $TmpDir"
     rlPhaseEnd
-   # Start of Test Phase, creating temp directory where test will take place
+   # Start of Test Phase, testing touch and ls commands
     rlPhaseStartTest
         rlRun "touch foo" 0 "Creating the foo test file"
         rlAssertExists "foo"
         rlRun "ls -l foo" 0 "Listing the foo test file"
     rlPhaseEnd
-
+   # Statr of Cleanup phase, temp directory is deleted
     rlPhaseStartCleanup
         rlRun "popd"
+        rlRun "rm -r $TmpDir" 0 "Removing tmp directory"
     rlPhaseEnd
 rlJournalPrint
 rlJournalEnd
 \end{lstlisting}
 
 
-\section{More in-depth description ??? }
+\section{BeakerLib's output}
+BeakerLib produces 3 kinds of outputs 2 files and terminal one. Files are saved into directory created for each individual test. If the test is run locally temporary directory is created on system with \textit{mktepm} command. If run on Beaker unique \textbf{TESTID} is generated for each test. This TESTID serves as a name for test directory as well as identifier which Beaker later uses when connecting test results with correct test.
 
-\section{Journal in-depth}
+\subsection{journal.txt}
+\textit{journal.txt} is a plain text file with human readable record of test's progress. After end of each phase, copy of the file is sent to Beaker for storage.
+\subsection{Terminal output}
+If the executed test is connected to an \textit{interactive shell} the same BeakerLib's output is printed to terminal's standard output (\textit{stdout}) as well as to journal.txt. However \textit{shell's} output is colored for increased readability.  
+
+\subsection{journal.xml}
+Last output is XML[abbre???] file. This file is stripped off of commands' output, but core information (such as which commands were executed, whether they passed or failed and so on) is kept. Also metadata about the test run (time of execution, which component was tested and more) as well as information about the hardware and software test was run on are added. \textit{journal.xml} is sent back to Beaker same as \textit{journal.txt} where it is available for further processing.
+
+\section{Journal problem}
 
 \section{Proposed solutions}
 
