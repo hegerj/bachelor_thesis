@@ -4,7 +4,7 @@
 % Start of text
 \chapter{Introduction}
 
-Focus of this thesis is a performance optimization of BeakerLib library, particularly its Journal feature. 
+Focus of this thesis is a performance optimization of Red Hat's BeakerLib library, particularly its Journal feature. 
 
 \chapter{Relevant projects}
 
@@ -60,20 +60,20 @@ Relations between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beak
 
 
 \chapter{BeakerLib}
-This chapter explains inner workings of BeakerLib more in-depth, with focus on Journal feature, its problems and proposed optimizations.
-\\
-\\
+This chapter takes a closer look on inner workings of BeakerLib, with focus on Journal feature.
+
+\section{Important functions}
 As stated earlier BeakerLib is shell-level library with functions that make writing and running tests easier as well as examining their results.
-BeakerLib adds testing functions to \textit{shell} functionality, so user can combine normal \textit{shell} commands and constructions with helping functions which can make writing tests and examining their results easier. There is around 80 of these functions, descriptions of most used ones follows:
+BeakerLib adds testing functions to \texttt{shell} functionality, so user can combine normal \texttt{shell} commands and constructions with helping functions which can make writing tests and examining their results easier. There is close to 80 of these functions (also known as rlCommands), descriptions of most used ones follows:
 \begin{itemize}
-\item \textbf{rlRun} - First argument of this function is any shell command, which is executed by rlRun. Second is an expected exit code of first argument, it can contain one or more codes. Third argument is a comment. BeakerLib logs FAIL or PASS if expected exit code differs or not from actual one respectively along with comment. This is most used and important function.
-\item \textbf{rlPass} - Manual assertion and logging of PASS. Useful when in combination with if statement which user doesn't want to appear in logs but still wants to log its result. Reciprocal function \textbf{rlFail} exists as well.
+\item \textbf{rlRun} - First argument of this function is any shell command, which is executed by rlRun. Second is an expected exit code of first argument, it can contain one or more codes. Third argument is a comment. BeakerLib logs \texttt{FAIL} or \texttt{PASS} if expected exit code differs or not from actual one respectively along with comment. This is most used and important function.
+\item \textbf{rlPass} - Manual assertion and logging of \texttt{PASS}. Useful when in combination with if statement which user doesn't want to appear in logs but still wants to log its result. Reciprocal function \textbf{rlFail} exists as well.
 \item \textbf{rlAssertExists} - Asserts whether file given as a first argument exists.
-\item \textbf{rlAssertGrep} - Function logs PASS when pattern given as first argument matches in a file which a second argument. Optional flags are passed to \textit{grep} and behave the same way.
-\item \textbf{rlAssertRpm} - Function asserts PASS when package given as first argument is installed.  Optional arguments allow specifying particular version, release or arch of the package.
+\item \textbf{rlAssertGrep} - Function logs \texttt{PASS} when pattern given as first argument matches in a file which a second argument. Optional flags are passed to \texttt{grep} and behave the same way.
+\item \textbf{rlAssertRpm} - Function asserts \texttt{PASS} when package given as first argument is installed.  Optional arguments allow specifying particular version, release or arch of the package.
 \item \textbf{rlAssertDiffer} - Asserts whether two files given as argument differ in their content. 
 \end{itemize}
-~\\
+\section{Phases}
 BeakerLib divides tests into logical groups called Phases. There are three basic types of phases:
 \begin{itemize}
 \item Setup - preparing conditions for the test (such as creating temporary files, starting needed services and so on)
@@ -111,42 +111,52 @@ rlJournalEnd
 
 
 \section{BeakerLib's output}
-BeakerLib produces 3 kinds of outputs 2 files and terminal one. Files are saved into directory created for each individual test. If the test is run locally temporary directory is created on system with \textit{mktepm} command. If run on Beaker unique \textbf{TESTID} is generated for each test. This TESTID serves as a name for test directory as well as identifier which Beaker later uses when connecting test results with correct test.
+BeakerLib produces 3 kinds of outputs 2 files and terminal one. Files are saved into directory created for each individual test. If the test is run locally temporary directory is created on system with \texttt{mktepm} command. If run on Beaker unique \textbf{TESTID} is generated for each test. This TESTID serves as a name for test directory as well as identifier which Beaker later uses when connecting test results with correct test.
 
 \subsection{journal.txt}
-\textit{journal.txt} is a plain text file with human readable record of test's progress. After end of each phase, copy of the file is sent to Beaker for storage.
+\texttt{journal.txt} is a plain text file with human readable record of test's progress. After end of each phase, copy of the file is sent to Beaker for storage.
 \subsection{Terminal output}
-If the executed test is connected to an \textit{interactive shell} the same BeakerLib's output is printed to terminal's standard output (\textit{stdout}) as well as to journal.txt. However \textit{shell's} output is colored for increased readability.  
+If the executed test is connected to an \texttt{interactive shell} the same BeakerLib's output is printed to terminal's standard output (\texttt{stdout}) as well as to journal.txt. However \texttt{shell's} output is colored for increased readability.  
 
 \subsection{journal.xml}
-Last output is XML[abbre???] file. This file is stripped off of commands' output, but core information (such as which commands were executed, whether they passed or failed and so on) is kept. Also metadata about the test run (time of execution, which component was tested and more) as well as information about the hardware and software test was run on are added. \textit{journal.xml} is sent back to Beaker same as \textit{journal.txt} where it is available for further processing.
+Last output is XML\footnote{eXtensible Markup Language} file. This file is stripped off of commands' output, but core information (such as which commands were executed, whether they passed or failed and so on) is kept. Also metadata about the test run (time of execution, which component was tested and more) as well as information about the hardware and software test was run on are added. \texttt{journal.xml} is sent back to Beaker same as \texttt{journal.txt} where it is available for further processing by automated tools. 
 
-\section{Journal problem}
 
-\section{Proposed solutions}
+\section{Analysis of slow performance}
+It was reported that BeakerLib suffers performance problems when running long tests. Time of processing each rlCommand grew longer after many (several hundreds and more) were used. Analysis of library was problematic due to lack of documentation, complex structure and uncommented code, however it indicated that problem lies with generating \texttt{journal.xml}. 
 
-\subsection{Change of xml parser}
+Python script \texttt{journalling.py}, responsible for most of BeakerLib's output creation, is called after each rlCommand to log its result into \texttt{journal.xml}. This isn't big problem with small test as the \texttt{journal.xml} file takes up only a few kilobytes, however when the file takes up dozens or hundreds of kilobytes, loading the file from disk, parsing, adding a line of log and then saving the file back to the disk adds significantly more load to CPU\footnote{Central Processing Unit}. 
 
-\subsection{Change in accessing journalling.py}
+\chapter{Solution of Journaling problem}
+This chapter describes proposed solutions to optimize Journaling problem.
+
+\section{Change of xml parser}
+XML parser is a program which can turn XML document into structured object in memory. Depending on implementation of the parses, that object is then easier to access by the program as it may provide methods to navigate the object and search it or potentially modify. 
+
+Parsing of XML in BeakerLib is done by \texttt{journalling.py} script by \texttt{Python} module \texttt{xml.dom.minidom}, which I decided to change to different one, to measure whether it will provide better performance. Because of reasons of backward compatibility to RHEL 5\footnote{Red Hat Enterprise Linux 5} which supports BeakerLib the choice of XML parsers was limited to native modules of \texttt{Python 2.4.3}. Two additional XML parsers were present for given version.
+
+\begin{itemize}
+\item xml.sax -  [https://docs.python.org/2/library/xml.sax.html] <expand>
+\item lxml - [http://lxml.de/] <expand>
+\end{itemize}
+
+I decided to implement \texttt{lxml} parser as it is supposed to be faster and less demanding on memory than \texttt{xml.dom.minidom} [http://lxml.de/performance.html].
+
+\section{Change in calling journalling.py}
+Next proposition to make BeakerLib faster is in a way \texttt{journalling.py} is called. Assuming repeated parsing of XML document slows BeakerLib the most, reducing the number of times it was parsed was the highest priority. 
 
 \subsection{Queue file solution}
 
-\subsubsection{(Dis)advantages}
-
-\subsubsection{Queue file}
-
-\subsubsection{Escaping}
-
-
 \subsection{Daemon-like solution}
 
-\subsubsection{(Dis)advantages}
 
-\subsubsection{Signals}
+\chapter{Implementation of proposed solutions}
 
-\subsubsection{Escaping}
+\section{Change of xml parser}
+\section{Queue file solution}
+\section{Daemon-like solution}
 
-
+\section{testing that my solution is the same}
 
 \chapter{Performance measuring}
 <Definition of performance measuring>
@@ -156,7 +166,7 @@ For performance measuring of BeakerLib I chose two kinds of tests in in two kind
 \section{Tests}
 
 \subsection{Artificial tests}
-First type of tests are artificial tests created by me with beaker-wizard* to specifically target and measure performance of journalling modification I made. They consist mostly of commands that directly work with journalling.xml. For example commands rlLog or rlPhaseStart and rlPhaseEnd. That way we can observe clear difference in performance without being affected by operations unrelated to journalling (executing actions that verify functionality of components in real tests). 
+First type of tests are artificial tests created by me with \texttt{beaker-wizard} to specifically target and measure performance of journaling modification I made. They consist mostly of commands that directly work with \texttt{journalling.py}. For example commands \textbf{rlLog} or \textbf{rlPhaseStart} and \textbf{rlPhaseEnd}. This way we can observe clear difference in performance without being affected by operations unrelated to journaling (executing actions that verify functionality of components in real tests). 
 
 <description of artificial tests with links to Appendix>
 
