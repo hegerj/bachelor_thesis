@@ -48,7 +48,7 @@ Beah [link to doc] is a default Beaker harness . <expand>
 Restraint [link to doc] is an alternative Beaker harness which can, unlike Beah, run with Beaker or standalone without it. <expand>
 \\
 \\
-Relations between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beaker_relation}
+Relations between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beaker_relation}. In this example user submits Beaker job containing three tests and hardware/software requirements for a machine the test should run on. After Beaker reserves it, it install Harness which successively executes each test and upload its result back to Beaker when user can access them.
 
 \begin{figure}[h!]
   \includegraphics[width=\linewidth]{beaker_relations.png}
@@ -119,7 +119,7 @@ BeakerLib produces 3 kinds of outputs 2 files and terminal one. Files are saved 
 If the executed test is connected to an \texttt{interactive shell} the same BeakerLib's output is printed to terminal's standard output (\texttt{stdout}) as well as to journal.txt. However \texttt{shell's} output is colored for increased readability.  
 
 \subsection{journal.xml}
-Last output is XML\footnote{eXtensible Markup Language} file. This file is stripped off of commands' output, but core information (such as which commands were executed, whether they passed or failed and so on) is kept. Also metadata about the test run (time of execution, which component was tested and more) as well as information about the hardware and software test was run on are added. \texttt{journal.xml} is sent back to Beaker same as \texttt{journal.txt} where it is available for further processing by automated tools. 
+Last output is XML\footnote{eXtensible Markup Language} file. This file is stripped off of commands' output, but core information (such as which commands were executed, whether they passed or failed and so on) is kept. Also metadata about the test run (time of execution, which component was tested and more) as well as information about the hardware and software test was run on are added. \texttt{journal.xml} is sent back to Beaker same as \texttt{journal.txt} where it is available for further processing by automated tools. It also serves as a source of information about current state of the test during its execution, for example whether there is currently an open phase or how many failed tests or phases there are so far.
 
 
 \section{Analysis of slow performance}
@@ -131,9 +131,9 @@ Python script \texttt{journalling.py}, responsible for most of BeakerLib's outpu
 This chapter describes proposed solutions to optimize Journaling problem.
 
 \section{Change of xml parser}
-XML parser is a program which can turn XML document into structured object in memory. Depending on implementation of the parses, that object is then easier to access by the program as it may provide methods to navigate the object and search it or potentially modify. 
+XML parser is a program which can turn XML document into structured object in RAM\footnote{Random Access Memory}. Depending on implementation of the parses, that object is then easier to access by the program as it may provide methods to navigate the object and search it or potentially modify. 
 
-Parsing of XML in BeakerLib is done by \texttt{journalling.py} script by \texttt{Python} module \texttt{xml.dom.minidom}, which I decided to change to different one, to measure whether it will provide better performance. Because of reasons of backward compatibility to RHEL 5\footnote{Red Hat Enterprise Linux 5} which supports BeakerLib the choice of XML parsers was limited to native modules of \texttt{Python 2.4.3}. Two additional XML parsers were present for given version.
+Parsing of XML in BeakerLib is done by \texttt{journalling.py} script by \texttt{Python} module \texttt{xml.dom.minidom}, which I decided to change to different one, to measure whether it will provide better performance. Because of reasons of backward compatibility to RHEL 5\footnote{Red Hat Enterprise Linux 5} which supports BeakerLib, the choice of XML parsers was limited to native modules of \texttt{Python 2.4.3}. Two additional XML parsers were present for given version.
 
 \begin{itemize}
 \item xml.sax -  [https://docs.python.org/2/library/xml.sax.html] <expand>
@@ -143,11 +143,22 @@ Parsing of XML in BeakerLib is done by \texttt{journalling.py} script by \texttt
 I decided to implement \texttt{lxml} parser as it is supposed to be faster and less demanding on memory than \texttt{xml.dom.minidom} [http://lxml.de/performance.html].
 
 \section{Change in calling journalling.py}
-Next proposition to make BeakerLib faster is in a way \texttt{journalling.py} is called. Assuming repeated parsing of XML document slows BeakerLib the most, reducing the number of times it was parsed was the highest priority. 
+Next proposition to make BeakerLib faster is in a way \texttt{journalling.py} is called. The assumption being that repeated parsing of XML document slows BeakerLib the most, reducing the number of times it was parsed was then the highest priority. 
 
 \subsection{Queue file solution}
+First solution is to create a new, temporary \texttt{queue file}, which will act as a buffer. rlCommands will behave as before apart from creating BeakerLib journals but instead they will write message into the queue file. This file will be read and processed only when necessary, that is at the end each phase, when journals are sent to Beaker.
+
+\subsubsection{Disadvantages}
+The way BeakerLib is designed now it in most cases expects some form of return value from \texttt{journalling.py} immediately after adding a log to a journal. Performed logging either returns code indicating success of failure or \texttt{string} with information about the current state of test. This presents problem as there is no way how to communicate back these information when parsing is postponed. 
 
 \subsection{Daemon-like solution}
+Second solution is to rewrite \texttt{journalling.py} script to have daemon-like behavior. That is to have it run as its own process throughout the whole time of test execution. The xml object will be stored in memory, and parsed as whole only at the beginning of journal creation and in case of restarting the test run (which happen when machine is rebooted).  
+
+This way BeakerLib can receive response about current test state immediately while still keeping CPU load minimal. Daemon-like solution however brings different obstacles.
+
+\subsubsection{Disadvantages}
+
+
 
 
 \chapter{Implementation of proposed solutions}
