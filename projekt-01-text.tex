@@ -12,7 +12,7 @@ In this chapter describes BeakerLib and projects relevant to it.
 
 \section{BeakerLib}
 
-BeakerLib is a shell-level integration testing library, providing convenience functions which simplify writing, running and analysis of integration and blackbox tests. 
+BeakerLib is a Linux shell-level integration testing library, providing convenience functions which simplify writing, running and analysis of integration and blackbox tests. 
 It is developed and maintained by Red Hat and operates under GNU General Public License.
 Main features of BeakerLib include:
 \begin{itemize}
@@ -114,18 +114,19 @@ rlJournalEnd
 BeakerLib produces 3 kinds of outputs 2 files and terminal one. Files are saved into directory created for each individual test. If the test is run locally temporary directory is created on system with \texttt{mktepm} command. If run on Beaker unique \textbf{TESTID} is generated for each test. This TESTID serves as a name for test directory as well as identifier which Beaker later uses when connecting test results with correct test.
 
 \subsection{journal.txt}
-\texttt{journal.txt} is a plain text file with human readable record of test's progress. After end of each phase, copy of the file is sent to Beaker for storage.
+\textit{journal.txt} is a plain text file with human readable record of test's progress. After end of each phase, copy of the file is sent to Beaker for storage.
+
 \subsection{Terminal output}
 If the executed test is connected to an \texttt{interactive shell} the same BeakerLib's output is printed to terminal's standard output (\texttt{stdout}) as well as to journal.txt. However \texttt{shell's} output is colored for increased readability.  
 
 \subsection{journal.xml}
-Last output is XML\footnote{eXtensible Markup Language} file. This file is stripped off of commands' output, but core information (such as which commands were executed, whether they passed or failed and so on) is kept. Also metadata about the test run (time of execution, which component was tested and more) as well as information about the hardware and software test was run on are added. \texttt{journal.xml} is sent back to Beaker same as \texttt{journal.txt} where it is available for further processing by automated tools. It also serves as a source of information about current state of the test during its execution, for example whether there is currently an open phase or how many failed tests or phases there are so far.
+Last output is XML\footnote{eXtensible Markup Language} file. This file is stripped off of commands' output, but core information (such as which commands were executed, whether they passed or failed and so on) is kept. Also metadata about the test run (time of execution, which component was tested and more) as well as information about the hardware and software test was run on are added. \textit{journal.xml} is sent back to Beaker same as \textit{journal.txt} where it is available for further processing by automated tools. It also serves as a source of information about current state of the test during its execution, for example whether there is currently an open phase or how many failed tests or phases there are so far.
 
 
 \section{Analysis of slow performance}
-It was reported that BeakerLib suffers performance problems when running long tests. Time of processing each rlCommand grew longer after many (several hundreds and more) were used. Analysis of library was problematic due to lack of documentation, complex structure and uncommented code, however it indicated that problem lies with generating \texttt{journal.xml}. 
+It was reported that BeakerLib suffers performance problems when running long tests. Time of processing each rlCommand grew longer after many (several hundreds and more) were used. Analysis of library was problematic due to lack of documentation, complex structure and uncommented code, however it indicated that problem lies with generating \textit{journal.xml}. 
 
-Python script \texttt{journalling.py}, responsible for most of BeakerLib's output creation, is called after each rlCommand to log its result into \texttt{journal.xml}. This isn't big problem with small test as the \texttt{journal.xml} file takes up only a few kilobytes, however when the file takes up dozens or hundreds of kilobytes, loading the file from disk, parsing, adding a line of log and then saving the file back to the disk adds significantly more load to CPU\footnote{Central Processing Unit}. 
+Python script \textit{journalling.py}, responsible for most of BeakerLib's output creation, is called after each rlCommand to log its result into \textit{journal.xml}. This isn't big problem with small test as the \textit{journal.xml} file takes up only a few kilobytes, however when the file takes up dozens or hundreds of kilobytes, loading the file from disk, parsing, adding a line of log and then saving the file back to the disk adds significantly more load to CPU\footnote{Central Processing Unit}. 
 
 \chapter{Solution of Journaling problem}
 This chapter describes proposed solutions to optimize Journaling problem.
@@ -133,7 +134,7 @@ This chapter describes proposed solutions to optimize Journaling problem.
 \section{Change of xml parser}
 XML parser is a program which can turn XML document into structured object in RAM\footnote{Random Access Memory}. Depending on implementation of the parses, that object is then easier to access by the program as it may provide methods to navigate the object and search it or potentially modify. 
 
-Parsing of XML in BeakerLib is done by \texttt{journalling.py} script by \texttt{Python} module \texttt{xml.dom.minidom}, which I decided to change to different one, to measure whether it will provide better performance. Because of reasons of backward compatibility to RHEL 5\footnote{Red Hat Enterprise Linux 5} which supports BeakerLib, the choice of XML parsers was limited to native modules of \texttt{Python 2.4.3}. Two additional XML parsers were present for given version.
+Parsing of XML in BeakerLib is done by \textit{journalling.py} script by \texttt{Python} module \texttt{xml.dom.minidom}, which I decided to change to different one, to measure whether it will provide better performance. Because of reasons of backward compatibility to RHEL 5\footnote{Red Hat Enterprise Linux 5} which supports BeakerLib, the choice of XML parsers was limited to native modules of \texttt{Python 2.4.3}. Two additional XML parsers were present for given version.
 
 \begin{itemize}
 \item xml.sax -  [https://docs.python.org/2/library/xml.sax.html] <expand>
@@ -143,27 +144,55 @@ Parsing of XML in BeakerLib is done by \texttt{journalling.py} script by \texttt
 I decided to implement \texttt{lxml} parser as it is supposed to be faster and less demanding on memory than \texttt{xml.dom.minidom} [http://lxml.de/performance.html].
 
 \section{Change in calling journalling.py}
-Next proposition to make BeakerLib faster is in a way \texttt{journalling.py} is called. The assumption being that repeated parsing of XML document slows BeakerLib the most, reducing the number of times it was parsed was then the highest priority. 
+Next proposition to make BeakerLib faster is in a way \textit{journalling.py} is called. The assumption being that repeated parsing of XML document slows BeakerLib the most, reducing the number of times it was parsed was then the highest priority. 
 
 \subsection{Queue file solution}
 First solution is to create a new, temporary \texttt{queue file}, which will act as a buffer. rlCommands will behave as before apart from creating BeakerLib journals but instead they will write message into the queue file. This file will be read and processed only when necessary, that is at the end each phase, when journals are sent to Beaker.
 
 \subsubsection{Disadvantages}
-The way BeakerLib is designed now it in most cases expects some form of return value from \texttt{journalling.py} immediately after adding a log to a journal. Performed logging either returns code indicating success of failure or \texttt{string} with information about the current state of test. This presents problem as there is no way how to communicate back these information when parsing is postponed. 
+The way BeakerLib is designed now it in most cases expects some form of return value from \textit{journalling.py} immediately after adding a log to a journal. Performed logging either returns code indicating success of failure or \texttt{string} with information about the current state of test. This presents problem as there is no way how to communicate back these information when parsing is postponed. 
 
 \subsection{Daemon-like solution}
-Second solution is to rewrite \texttt{journalling.py} script to have daemon-like behavior. That is to have it run as its own process throughout the whole time of test execution. The xml object will be stored in memory, and parsed as whole only at the beginning of journal creation and in case of restarting the test run (which happen when machine is rebooted).  
+Second solution is to rewrite \textit{journalling.py} script to have daemon-like behavior. That is to have it run as its own process throughout the whole time of test execution. The xml object will be stored in memory, and parsed as whole only at the beginning of journal creation and in case of restarting the test run (which happen when machine is rebooted).  
 
 This way BeakerLib can receive response about current test state immediately while still keeping CPU load minimal. Daemon-like solution however brings different obstacles.
 
 \subsubsection{Disadvantages}
+An independent, potentially long running process daemon is more prone to unplanned events such as unexpected exit. This must be addressed by both daemon (to exit as safely as possible)  and by the rest of BeakerLib (to detect that daemon is no longer running and to behave accordingly). 
 
+\subsubsection{Communication}
+ Synchronous inter-process communication between running test and daemon has to be created for test to  inform which rlCommand is supposed to be logged and for daemon to respond with current state of XML document. I considered two options:
 
+\begin{itemize}
+\item Unix sockets  -  <expand>
+\item Named pipes - Named pipes are device files. They allow inter-process communication by reading it and writing into is as if regular file, however under normal circumstances the read/write is a blocking operation. This means if one process opens pipe for reading, it will hang there until another process opens the pipe for writing. This feature can be used for synchronization of communication between processes. 
+\end{itemize}
+
+I chose to implement communication through Named pipes because of built-in synchronization.
 
 
 \chapter{Implementation of proposed solutions}
+Thi chapter describes how were proposed solutions implemented.
 
 \section{Change of xml parser}
+\section{Difference in parsers}
+As mentioned before I chose to change original XML parser to \texttt{lxml}. Only changes in code were in file \textit{journalling.py} as it is only part of BeakerLib that directly works with journal's XML object. 
+Most of the changes consisted in changing \texttt{xml.dom.minidom's} method for creating new XML element and assigning value into it.
+Biggest difference between given parsers is that \texttt{lxml} does not provide many helping methods as \texttt{xml.dom.minidom} does.
+For example in \texttt{lxml}  there is no method \texttt{getElementsByTagName()} to search XML object by a tag name. Instead of it \texttt{lxml} supports \texttt{xpath} [https://www.w3schools.com/xml/xpath\_intro.asp] syntax for searching the object.
+
+\subsubsection{xpath}
+xpath\footnote{XML Path Language} is part of XSLT\footnote{eXtensible Stylesheet Language Transformations} standart. It can used to navigate through elements and attributes in an XML document. <expand???>
+\\
+\\
+Another example of difference is an approach for accessing element's children. While \texttt{xml.dom.minidom} has dedicated methods and attributes such as \texttt{hasChildNodes()} which returns \texttt{bool} value or \texttt{childNodes} which is a iterable attribute of element's children, \texttt{lxml} has more low level implementation. It treats elements as python lists so \texttt{hasChildNodes()} can be replaced with simple \texttt{len(element)}.
+\\
+\\
+During changing of parsers I discovered and fixed some bugs present in current implementation of \textit{journalling.py}, such as wrong path when searching for used plugins. ??? asi nedava smysl
+\\
+\\
+Because preliminary performance measurement showed slightly faster test execution, I decided to implement the rest of the proposed solutions with the parser.
+
 \section{Queue file solution}
 \section{Daemon-like solution}
 
