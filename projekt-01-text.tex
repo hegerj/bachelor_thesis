@@ -244,7 +244,7 @@ I decided to implement \texttt{lxml} parser as it is supposed to be faster and l
 Next proposition to make BeakerLib faster is in a way \textit{journalling.py} is called. The assumption being that repeated parsing of XML document slows BeakerLib the most, reducing the number of times it was parsed was then the highest priority. 
 
 \subsection{Queue file solution}
-First solution is to create a new, temporary \textbf{queue file}, which will act as a buffer. \textbf{rlCommands} will behave as before apart from creating BeakerLib journals but instead they will write message into the \textbf{queue file}. This file will be read and processed only when necessary, that is at the end each phase, when journals are sent to Beaker.
+First solution is to create a new, temporary \textbf{queue file}, which will act as a kind of buffer. \mbox{\textbf{rlCommands}} will behave as before apart from creating BeakerLib journals, but instead they will write message into the \textbf{queue file}. This file will be read and processed only when necessary, that is at the end each phase, when journals are sent to Beaker.
 
 \subsubsection{Disadvantages}
 The way BeakerLib is designed now it in most cases expects some form of return value from \textit{journalling.py} immediately after adding a log to a journal. Performed logging either returns code indicating success of failure or \texttt{string} with information about the current state of test. This presents problem as there is no way how to communicate back these information when parsing is postponed. 
@@ -262,7 +262,7 @@ Inter-process communication between running test and daemon has to be created fo
 
 \begin{itemize}
 \item Unix sockets  -  <expand>
-\item Named pipes - Named pipes are device files. They allow inter-process communication by reading it and writing into is as if regular file, however under normal circumstances the read/write is a blocking operation. This means if one process opens pipe for reading, it will hang there until another process opens the pipe for writing. This feature can be used for synchronization of communication between processes. 
+\item Named pipes - Named pipes are device files. They allow inter-process communication by reading it and writing into is as if regular file, however under normal circumstances the read/write is a blocking operation\cite{pipes_blocking}. This means if one process opens pipe for reading, it will hang there until another process opens the pipe for writing. This feature can be used for synchronization of communication between processes. 
 \end{itemize}
 
 % DOPLINT CITACE ^^ ???
@@ -309,6 +309,7 @@ Original calling of \textit{journalling.py}, which is a main functionality of \t
 \item rlGetPhaseState() - requires number of failed phases in the test so far
 \item rljAddPhase() - requires immediate print
 \item rljClosePhase() - requires result of closed phase, to send it to Beaker along with Journal
+\item rlJournalStart()
 \end{itemize}
 \end{itemize}
 
@@ -316,9 +317,11 @@ Apart from printing to \textbf{queue file}, \textbf{rljPrintToQueue} also has to
 Escaping is done with \texttt{printf} bash builtin\cite{bash_builtins}, specifically its \texttt{\%q} option which causes \texttt{printf} to output in \texttt{shell-quoted} format.
 
 \subsection{od\_journalling.py}
-File \textit{od\_journalling.py} originated from \textit{ournalling.py} but it differs in some ways.
+File \textit{od\_journalling.py} originated from \textit{journalling.py} but it differs in some ways.
 
-Now when it is called, it first parses current \textit{journal.xml} and then calls new method \texttt{updateXML()} wtih parsed XML object as an argument. This method opens \textbf{queue file} and finds last line it accessed in previous call. From there it reads buffered lines and modifies the XML object accordingly.When it reaches end of file, it makes a mark for future readings and returns to the original call coming from \textit{journal.sh} 
+Now when it is called, it first parses current \textit{journal.xml} and then calls new method \texttt{updateXML()} with parsed XML object as an argument. This method opens \textbf{queue file} and finds last line it accessed in previous call. From there it reads buffered lines, which are decoded from escaped and modifies the XML object accordingly.When it reaches end of file, it makes a mark for future readings and returns to the original call coming from one of the \textit{journal.sh's}  Immediate calling functions. After modification from that function it generates response and returns it to \textit{journal.sh}. Exceptions to this behavior are calls  from rlJournalStart(), which doesn't access textbf{queue file} but only initializes XML object and returns exit code whose value depends on how was initialization successful and rlJournalEnd() which makes sure every buffered command was processed as it is an exit point from the test.
+
+\subsection{Problems with implementation}
 
 
 \section{Daemon-like solution}
