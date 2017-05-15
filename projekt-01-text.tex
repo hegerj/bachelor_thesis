@@ -98,7 +98,7 @@ Apart from predefined Phases, user can also define own phases by calling \textbf
 Basic phases Setup and Cleanup are WARN type, Test phase is a FAIL type.
 
 The result of the whole test is the same as the worst result of any phase in the order: Failed, Warning, Passed.
-Asserts made outside of phases will automatically fail.
+Asserts must not be used outside of phases, if such a case occurs, new  
 
 This division helps with examining the result of test as it shows which phase, if any, causes fail in BeakerLib's output. 
 example test \ref{lst:test_example} shows how basic BeakerLib test looks.
@@ -181,13 +181,17 @@ BeakerLib produces three kinds of outputs, two file formats and a console one wh
 \end{lstlisting}
 
 \subsection{Console output}
-If the executed test is connected to an \texttt{interactive shell} mostly the same BeakerLib's output as saved into \textit{journal.txt} is also printed to console's standard output (\texttt{stdout}). Apart from journal.txt's content console's output is enriched by executed command's output. Also \texttt{shell's} output is colored for increased readability.  Figure \ref{fig:console_output} shows snippet of such output.
+\label{console_out}
+If the executed test is connected to an \texttt{interactive shell} similar, human-readable, output to the \textit{journal.txt} is also printed to console's standard output (\texttt{stdout}). Apart from  \textit{journal.txt's} content console's output is complemented by executed command's output. Also \texttt{shell's} output is colored for increased readability.  Figure \ref{fig:console_output} shows snippet of such output.
 
 \begin{figure}
   \includegraphics[width=\linewidth]{console_output.png}
   \caption{Snippet from console's output}
   \label{fig:console_output}
 \end{figure}
+
+\subsection{TESTOUT.log}
+If the executed test is not connected to an \texttt{interactive shell}, the same text as in Console's output is printed into file \textit{TESTOUT.log}. This is mostly the case when executing a test remotely (for example in Beaker), where it is not possible to see the Console output.
 
 \subsection{journal.xml}
 Last output is a an XML\footnote{eXtensible Markup Language} file. This document is stripped off of executed commands' own output, but core information (such as which commands were executed, whether they passed or failed and so on) is kept. Also metadata about the test run (time of execution, which component was tested and more) as well as information about the hardware and software test was run on are added. \textit{journal.xml} is sent back to Beaker same as \textit{journal.txt} where it is available for further processing by automated tools. It also serves as a source of information about current state of the test during its execution, for example whether there is currently an open phase or how many failed tests or phases there are so far.
@@ -313,7 +317,9 @@ Original calling of \textit{journalling.py}, which is a main functionality of \t
 \end{itemize}
 \end{itemize}
 
-Apart from printing to \textbf{queue file}, \textbf{rljPrintToQueue} also has to escape given arguments. This done because firstly some of the arguments originating from user may contain newline character which would break "one buffered command per line" rule in  \textbf{queue file} and secondly so \textit{od\_journalling.py} may parse it with \texttt{optparse} module.
+Function \textbf{rljAddTest()} is the cause of the most calls of \textit{journalling.py} in original solution, therefore had the highest need to be moved into group of functions with Delayed calling. However it does require knowledge of current state of the test. That being situation when Assert (rlCommand using \textbf{rljAddTest()} for Journaling) is used outside of a phase, such information is held only in current \textit{journal.xml}. To solve this problem functionality of  \textbf{rljAddTest()} had to moved into \textit{{od\_journalling.py}} script, discussed in the next subsection.
+
+Apart from printing to \textbf{queue file}, \textbf{rljPrintToQueue} also has to escape given arguments. This done because firstly some of the arguments originating from user may contain newline character which would break the"one buffered command per line" rule in  \textbf{queue file's} format and secondly so \textit{od\_journalling.py} may parse it with \texttt{optparse} module.
 Escaping is done with \texttt{printf} bash builtin\cite{bash_builtins}, specifically its \texttt{\%q} option which causes \texttt{printf} to output in \texttt{shell-quoted} format.
 
 \subsection{od\_journalling.py}
@@ -322,7 +328,9 @@ File \textit{od\_journalling.py} originated from \textit{journalling.py} but it 
 Now when it is called, it first parses current \textit{journal.xml} and then calls new method \texttt{updateXML()} with parsed XML object as an argument. This method opens \textbf{queue file} and finds last line it accessed in previous call. From there it reads buffered lines, which are decoded from escaped and modifies the XML object accordingly.When it reaches end of file, it makes a mark for future readings and returns to the original call coming from one of the \textit{journal.sh's}  Immediate calling functions. After modification from that function it generates response and returns it to \textit{journal.sh}. Exceptions to this behavior are calls  from rlJournalStart(), which doesn't access textbf{queue file} but only initializes XML object and returns exit code whose value depends on how was initialization successful and rlJournalEnd() which makes sure every buffered command was processed as it is an exit point from the test.
 
 \subsection{Problems with implementation}
+Main goal of this solution was to reduce number of times \textit{journal.xml} is parsed, by delaying as many Journaling operations as possible, while keeping BeakerLib's outputs the same. The way BeakerLib is designed now it is not possible, because some information is always lost when operations are delayed. In case of this implementation I was able to keep \textit{journal.xml}, and therefore \textit{journal.txt}  as well, the same as with original solution, however at the price Console's output which is now missing some information usually given by functions from Delayed calling category.
 
+Solving this issue would require larger changes to BeakerLib's design which I decided not to implement for now so \textbf{Queue file} solution remains only as a proof of concept.
 
 \section{Daemon-like solution}
 

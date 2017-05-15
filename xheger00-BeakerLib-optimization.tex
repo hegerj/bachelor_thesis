@@ -107,7 +107,7 @@
   %author.title.p=Bc., %titul pred jmenem (nepovinne) / title before the name (optional)
   %author.title.a=PhD, %titul za jmenem (nepovinne) / title after the name (optional)
   %Ustav / Department
-  department=DITS, % doplnte prislusnou zkratku dle ustavu na zadani: UPSY/UIFS/UITS/UPGM
+  department=UITS, % doplnte prislusnou zkratku dle ustavu na zadani: UPSY/UIFS/UITS/UPGM
   %                  fill in appropriate abbreviation of the department according to assignment: UPSY/UIFS/UITS/UPGM
   %Skolitel / supervisor
   supervisor={Hana Pluháčková}, %cele jmeno a prijmeni skolitele / full name and surname of the supervisor
@@ -311,22 +311,22 @@ morekeywords={}
   \cleardoublepage
 \fi
   
-%\ifslovak
-%  \section*{Zoznam príloh}
-%  \addcontentsline{toc}{section}{Zoznam príloh}
-%\else
- % \ifczech
-%    \section*{Seznam příloh}
-%    \addcontentsline{toc}{section}{Seznam příloh}
- % \else
+\ifslovak
+  \section*{Zoznam príloh}
+  \addcontentsline{toc}{section}{Zoznam príloh}
+\else
+  \ifczech
+    \section*{Seznam příloh}
+    \addcontentsline{toc}{section}{Seznam příloh}
+  \else
     \section*{List of Appendices}
     \addcontentsline{toc}{section}{List of Appendices}
-  %\fi
-%\fi
+  \fi
+\fi
   \startcontents[chapters]
   % seznam příloh / list of appendices
    \printcontents[chapters]{l}{0}{\setcounter{tocdepth}{2}}
-  
+ 
   % vynechani stranky v oboustrannem rezimu
   \iftwoside
     \cleardoublepage
