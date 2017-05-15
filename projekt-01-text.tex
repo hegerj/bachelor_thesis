@@ -16,26 +16,26 @@ This this chapter describes BeakerLib and projects relevant to it. Nejprve je po
 
 \section{BeakerLib}
 
-BeakerLib is a Linux shell-level integration testing library, providing convenience functions which simplify writing, running and analysis of integration and blackbox tests. 
+BeakerLib is a Linux shell-level integration testing library, providing convenience functions which simplify writing, running and analysis of integration and blackbox tests. \cite{beakerlib_wiki}
 It is developed and maintained by Red Hat and operates under GNU General Public License.
 Main features of BeakerLib include:
 \begin{itemize}
-\item Journal - uniform logging mechanism
+\item Journal - uniform logging mechanism (logs and results saved in flexible XML format, easy to compare results and generate reports)
 \item Phases - logical grouping of test actions, clear separation of setup / test / cleanup
 \item Asserts - common checks affecting the overall results of individual phases (checking for exit codes, file existence and content...)
-\item Helpers - convenience functions for common operations such as managing system services, backup and restore of files
+\item Helpers - convenience functions for common operations such as managing system services, backup and restore of files and more
 \end{itemize}
-[citace beakerlib github wiki]
+
 
 This thesis focuses on BeakerLib Journal and problem it causes with long tests. ??? Which will be described in chapter ...
 
 
 \section{Beaker}
 
-Beaker is a full stack software and hardware integration testing system, with the ability to manage a globally distributed network of test labs.  [citace beaker doc] It is Red Hat community project under GNU General Public License version 2.
+Beaker\cite{beaker_doc} is a full stack software and hardware integration testing system, with the ability to manage a globally distributed network of test labs.  It is Red Hat community project under GNU General Public License version 2.
 
 Main functionality includes management of hardware inventory, on which Beaker can install wide variety  of operating systems from Red Hat Linux family. Another notable part  is Task library which contains rpm packages of individual tests which can be run on provided machines. 
-Users then can specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package [link to beaker download page ??? ]. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  After Test Harness finishes running the tests, results are sent back to Beaker where they are stored for specified period of time. 
+Users then can specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  After Test Harness finishes running the tests, results are sent back to Beaker where they are stored for specified period of time. 
 
 \subsection{beaker-wizard}
 Part of Beaker package. Interactive command-line tool which automates creation of BeakerLib tests. Using predefined or user-defined templates it creates all files that are needed to run BeakerLib test. 
@@ -227,18 +227,18 @@ XML parser is a program which can turn XML document into structured object in RA
 
 Parsing of XML in BeakerLib is done by \textit{journalling.py} script by \texttt{Python} module \texttt{xml.dom.minidom}. 
 
- \texttt{xml.dom.minidom} is a native part of \texttt{Python} from version 2.0 and provides minimal implementation of the DOM\footnote{Document Object Model} interface, with an API\footnote{Application Programming Interface} similar to that in other languages. [https://docs.python.org/2/library/xml.dom.minidom.html]
+ \texttt{xml.dom.minidom} is a native part of \texttt{Python} from version 2.0 and provides minimal implementation of the DOM\footnote{Document Object Model} interface, with an API\footnote{Application Programming Interface} similar to that in other languages. \cite{minidom_doc}
 
 I decided to change parser to different one, to measure whether it will provide better performance. Because of reasons of backward compatibility with RHEL 5\footnote{Red Hat Enterprise Linux 5} which needs to be supported by BeakerLib, the choice of XML parsers was limited to native modules of \texttt{Python 2.4.3}. Two additional XML parsers were present for given version.
 
 \begin{itemize}
-\item lxml - The \texttt{lxml} XML toolkit is a Pythonic binding for the C libraries libxml2 and libxslt. It combines the speed and XML feature completeness of these libraries with the simplicity of a native \texttt{Python} API.  [http://lxml.de/index.html].
+\item lxml - The \texttt{lxml} XML toolkit is a Pythonic binding for the C libraries libxml2 and libxslt. It combines the speed and XML feature completeness of these libraries with the simplicity of a native \texttt{Python} API.  \cite{lxml_doc}
 
-it works similarly to \texttt{xml.dom.minidom} in the way that when reading XML object from a file, it will read it whole, builds an object out of it and provides methods for the object to allow access to it.
-\item xml.sax  [https://docs.python.org/2/library/xml.sax.html] - \texttt{xml.sax} originated as a parser for \texttt{Java}.  [https://docstore.mik.ua/orelly/xml/sax2/ch01\_04.htm] In \texttt{Python} it was released with version 2.0. It differs from \texttt{xml.dom.minidom} and \texttt{lxml} where the two mentioned parsers work with a whole XML file,  \texttt{xml.sax} emits events as it goes step by step through the file. [https://wiki.python.org/moin/Sax] Using this approach means less memory has to be allocated for XML handling and therefore makes it ideal when working with very large amount of XML  data.
+It works similarly to \texttt{xml.dom.minidom} in the way that when reading XML object from a file, it will read it whole, builds an object out of it and provides methods for the object to allow access to it.
+\item xml.sax  \cite{sax_doc} - \texttt{xml.sax} originated as a parser for \texttt{Java}\cite{Sax2}. In \texttt{Python} it was released with version 2.0. It differs from \texttt{xml.dom.minidom} and \texttt{lxml} where the two mentioned parsers work with a whole XML file,  \texttt{xml.sax} emits events as it goes step by step through the file\cite{sax_example}. Using this approach means less memory has to be allocated for XML handling and therefore makes it ideal when working with very large amount of XML  data.
 \end{itemize}
 
-I decided to implement \texttt{lxml} parser as it is supposed to be faster and less demanding on memory than \texttt{xml.dom.minidom} [http://lxml.de/performance.html], while keeping its intuitive interface.
+I decided to implement \texttt{lxml} parser as it is supposed to be faster and less demanding on memory than \texttt{xml.dom.minidom}\cite{lxml_performance}, while keeping its intuitive interface.
 
 \section{Change in calling journalling.py}
 Next proposition to make BeakerLib faster is in a way \textit{journalling.py} is called. The assumption being that repeated parsing of XML document slows BeakerLib the most, reducing the number of times it was parsed was then the highest priority. 
@@ -279,7 +279,7 @@ This chapter describes how the proposed solutions were implemented. Each solutio
 As mentioned before I chose to change original XML parser to \texttt{lxml}. Only changes in code were in file \textit{journalling.py} as it is only part of BeakerLib that directly works with journal's XML object. 
 Most of the changes consisted in changing \texttt{xml.dom.minidom's} method for creating new XML element and assigning value into it.
 Biggest difference between given parsers is that \texttt{lxml} does not provide many helping methods as \texttt{xml.dom.minidom} does.
-For example in \texttt{lxml}  there is no method \texttt{getElementsByTagName()} to search XML object by a tag name. Instead \texttt{lxml} supports \texttt{xpath} [https://www.w3schools.com/xml/xpath\_intro.asp] syntax for searching the object. xpath\footnote{XML Path Language} is part of XSLT\footnote{eXtensible Stylesheet Language Transformations} standard. It be can used to navigate through elements and attributes in an XML document.
+For example in \texttt{lxml}  there is no method \texttt{getElementsByTagName()} to search XML object by a tag name. Instead \texttt{lxml} supports \texttt{xpath} \cite{xpath} syntax for searching the object. xpath\footnote{XML Path Language} is part of XSLT\footnote{eXtensible Stylesheet Language Transformations} standard. It be can used to navigate through elements and attributes in an XML document.
 
 Another example of difference is an approach for accessing element's children. While \texttt{xml.dom.minidom} has dedicated methods and attributes such as \texttt{hasChildNodes()} which returns \texttt{bool} value or \texttt{childNodes} which is a iterable attribute of element's children, \texttt{lxml} has more low level implementation. It treats elements as python lists so \texttt{hasChildNodes()} can be replaced with simple \texttt{len(element) != 0}.
 \\
