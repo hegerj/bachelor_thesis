@@ -232,6 +232,28 @@ backgroundcolor=\color{white},
 morekeywords={rlRun, rlPhaseStartTest, rlPhaseEnd, rlPhaseStartTest, rlPhaseStartCleanup, rlAssertRpm, rlJournalPrint, rlJournalEnd, rlJournalStart, rlAssertExists, rlPhaseStartSetup}
  }
 
+\lstdefinestyle{txt}{
+basicstyle=\tiny,
+keywordstyle=\color{blue},
+commentstyle=\color{gray},
+stringstyle=\color{orange},
+numbers=left,
+stepnumber=1,
+numbersep=5pt,
+numberstyle=\tiny,
+breaklines=true,
+breakautoindent=true,
+breakatwhitespace=false,
+postbreak=\space,
+tabsize=2,
+basicstyle=\ttfamily\scriptsize,
+showspaces=false,
+showstringspaces=false,
+extendedchars=true,
+backgroundcolor=\color{white},
+morekeywords={}
+ }
+
 
   % Text prace / Thesis text
   % ----------------------------------------------
@@ -239,25 +261,25 @@ morekeywords={rlRun, rlPhaseStartTest, rlPhaseEnd, rlPhaseStartTest, rlPhaseStar
 
   % Pouzita literatura / Bibliography
   % ----------------------------------------------
-\ifslovak
-  \makeatletter
-  \def\@openbib@code{\addcontentsline{toc}{chapter}{Literatúra}}
-  \makeatother
-  \bibliographystyle{bib-styles/czechiso}
-\else
-  \ifczech
-    \makeatletter
-    \def\@openbib@code{\addcontentsline{toc}{chapter}{Literatura}}
-    \makeatother
-    \bibliographystyle{bib-styles/czechiso}
-  \else 
+%\ifslovak
+  %\makeatletter
+  %\def\@openbib@code{\addcontentsline{toc}{chapter}{Literatúra}}
+  %\makeatother
+ % \bibliographystyle{bib-styles/czechiso}
+%\else
+  %\ifczech
+    %\makeatletter
+    %\def\@openbib@code{\addcontentsline{toc}{chapter}{Literatura}}
+    %\makeatother
+   % \bibliographystyle{bib-styles/czechiso}
+  %\else 
     \makeatletter
     \def\@openbib@code{\addcontentsline{toc}{chapter}{Bibliography}}
     \makeatother
     \bibliographystyle{bib-styles/englishiso}
-  %  \bibliographystyle{alpha}
-  \fi
-\fi
+    %\bibliographystyle{alpha}
+ % \fi
+%\fi
   \begin{flushleft}
   \bibliography{projekt-20-literatura-bibliography}
   \end{flushleft}
@@ -289,25 +311,25 @@ morekeywords={rlRun, rlPhaseStartTest, rlPhaseEnd, rlPhaseStartTest, rlPhaseStar
   \cleardoublepage
 \fi
   
-\ifslovak
+%\ifslovak
 %  \section*{Zoznam príloh}
 %  \addcontentsline{toc}{section}{Zoznam príloh}
-\else
-  \ifczech
+%\else
+ % \ifczech
 %    \section*{Seznam příloh}
 %    \addcontentsline{toc}{section}{Seznam příloh}
-  \else
-%    \section*{List of Appendices}
-%    \addcontentsline{toc}{section}{List of Appendices}
-  \fi
-\fi
+ % \else
+    \section*{List of Appendices}
+    \addcontentsline{toc}{section}{List of Appendices}
+  %\fi
+%\fi
   \startcontents[chapters]
   % seznam příloh / list of appendices
-  % \printcontents[chapters]{l}{0}{\setcounter{tocdepth}{2}}
+   \printcontents[chapters]{l}{0}{\setcounter{tocdepth}{2}}
   
   % vynechani stranky v oboustrannem rezimu
   \iftwoside
     \cleardoublepage
   \fi
-%  \input{projekt-30-prilohy-appendices} % viz. prilohy.tex / see prilohy.tex
+  \input{projekt-30-prilohy-appendices} % viz. prilohy.tex / see prilohy.tex
 \end{document}
