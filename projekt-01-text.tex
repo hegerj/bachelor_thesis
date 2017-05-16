@@ -26,7 +26,7 @@ Main features of BeakerLib include:
 \begin{itemize}
 \item Journal - uniform logging mechanism (logs and results saved in flexible XML format, easy to compare results and generate reports)
 \item Phases - logical grouping of test actions, clear separation of setup / test / cleanup
-\item Asserts - common checks affecting the overall results of individual phases (checking for exit codes, file existence and content...)
+\item Asserts - common checks affecting the overall results of individual phases (checking for \texttt{exit codes}, file existence and content...)
 \item Helpers - convenience functions for common operations such as managing system services, backup and restore of files and more
 \end{itemize}
 
@@ -74,7 +74,7 @@ This chapter takes a closer look on inner workings of BeakerLib, with focus on J
 As stated earlier BeakerLib is shell-level library with functions that make writing and running tests easier as well as examining their results.
 BeakerLib adds testing functions to \texttt{shell} functionality, so user can combine normal \texttt{shell} commands and constructions with helping functions which can make writing tests and examining their results easier. There is close to 80 of these functions (also known as \textbf{rlCommands}), description of most used ones follows:
 \begin{itemize}
-\item \texttt{rlRun()} - First argument of this function is any \texttt{shell} command, which is executed by \texttt{rlRun()}. Second is an expected exit code of first argument, it can contain one or more codes. Third argument is a comment. BeakerLib logs \texttt{FAIL} or \texttt{PASS} if expected exit code differs or not from actual one respectively along with comment. This is most used and important function.
+\item \texttt{rlRun()} - First argument of this function is any \texttt{shell} command, which is executed by \texttt{rlRun()}. Second is an expected \texttt{exit code} of first argument, it can contain one or more codes. Third argument is a comment. BeakerLib logs \texttt{FAIL} or \texttt{PASS} if expected exit code differs or not from actual one respectively along with comment. This is most used and important function.
 \item \texttt{rlPass()} - Manual assertion and logging of \texttt{PASS}. Useful when in combination with if statement which user doesn't want to appear in logs but still wants to log its result. Reciprocal function \texttt{rlFail()} exists as well.
 \item \texttt{rlAssertExists} - Asserts whether file given as a first argument exists.
 \item \texttt{rlAssertGrep()} - Function logs \texttt{PASS} when pattern given as first argument matches in a file which is given a second argument. Optional flags are passed to \texttt{grep} and behave the same way.
@@ -340,11 +340,11 @@ I chose to implement communication through Named pipes because synchronization i
 \chapter{Implementation of proposed solutions}
 \label{implementations}
 This chapter describes how the proposed solutions were implemented. Each solution has its own section that describes implementation details and obstacles that were found and had to be solved during the implementation.
-During changing of parsers I discovered and fixed few bugs present in current implementation of \textit{journalling.py}.
+During changing of parsers I discovered and reported few bugs present in current implementation of \textit{journalling.py}.
 
 \section{Change of xml parser}
 \subsection{Difference in parsers}
-As mentioned before I chose to change original XML parser to \texttt{lxml}. Only changes in code were in file \textit{journalling.py} as it is only part of BeakerLib that directly works with journal's XML object. 
+As mentioned before I chose to change original XML parser to \texttt{lxml}. Only changes in source code were in file \textit{journalling.py} as it is only part of BeakerLib that directly works with journal's XML object. 
 Most of the changes consisted in changing \texttt{xml.dom.minidom's} method for creating new XML element and assigning value into it.
 Biggest difference between given parsers is that \texttt{lxml} does not provide many helping methods as \texttt{xml.dom.minidom} does.
 For example in \texttt{lxml}  there is no method \texttt{getElementsByTagName()} to search XML object by a tag name. Instead \texttt{lxml} supports \texttt{xpath} \cite{xpath} syntax for searching the object. xpath\footnote{XML Path Language} is part of XSLT\footnote{eXtensible Stylesheet Language Transformations} standard. It be can used to navigate through elements and attributes in an XML document.
@@ -394,7 +394,7 @@ Now when it is called, it first parses current \textit{journal.xml} and then cal
 
 When it reaches end of file, it makes a mark for future readings and returns to the original call coming from one of the \textit{journal.sh's}  Immediate calling functions. After modification from that function it generates response and returns it to \textit{journal.sh}. 
 
-Exceptions to this behavior are calls  from \texttt{rlJournalStart()}, which doesn't access \textbf{queue file} but only initializes XML object and returns exit code whose value depends on how was initialization successful and \texttt{rlJournalEnd()} which makes sure every buffered command was processed as it is an exit point from the test.
+Exceptions to this behavior are calls  from \texttt{rlJournalStart()}, which doesn't access \textbf{queue file} but only initializes XML object and returns an \texttt{exit code} whose value depends on how was initialization successful and \texttt{rlJournalEnd()} which makes sure every buffered command was processed as it is an exit point from the test.
 
 As mentioned in previous subsection, functionality of  \texttt{rljAddTest()} had to be altered. Given that bash side of BeakerLib had no way of knowing if the test was added outside of phase at the time of writing this operation into the \textbf{queue file}, this action had to be resolved when \textit{od\_journalling.py} processed the \textbf{queue file}. 
 New method \texttt{testOutOfPhase()} was implemented which is called when assertion outside of phase is detected and it performs the same process as when this event happened in original \textit{journal.sh}.
@@ -417,15 +417,35 @@ After arguments are escaped, \texttt{rljCallDaemon()} checks whether the Daemon 
 
 \texttt{kill} program is used to send signals to processes. If used with \texttt{-0} option, no signal is actually sent but error checking against the process is still performed and it returns \texttt{0} when process with given PID is running\cite{man_kill}. This is done to make sure the Daemon is still running before pipe writing operation.  If the Daemon wasn't running before writing to pipe, the test would hang there indefinitely, so if the Daemon is not running, the test exits with error.
 
-After this check is performed, \texttt{rljCallDaemon()} writes to Named pipe escaped message, where it wait until Daemon reads it and responds. Response is read as a next action, decoded from a format that will discussed later and then the response is returned to function that called \texttt{rljCallDaemon()}. 
-This is repeated until end of the test is reached, where function \texttt{rljJournalEnd()} sends \texttt{signal} with \texttt{kill} to end the Daemon. 
+After this check is performed, \texttt{rljCallDaemon()} writes to Named pipe escaped message, where it wait until Daemon reads it and responds. Response is read as a next action, decoded from a format that will discussed in the next subsection and then the response is returned to function that called \texttt{rljCallDaemon()}. 
+This is repeated until end of the test is reached, where function \texttt{rljJournalEnd()} sends \texttt{signal} with \texttt{kill} to end the Daemon.
 
-\subsection{Daemon}
-\textit{journalling\_daemon.py} script again originates from \textit{journalling.py}. This time however, it is designed to run in endless loop, instead of returning after one executed action.
+Function \texttt{rlJournalPrintText()} had to be reworked slightly. It now accepts one optional argument and passes it to \texttt{rljCallDaemon()}. All current functions that use \texttt{rlJournalPrintText()} were added this argument. In original solution there was a simple way how to have \textit{journalling.py} print either to \texttt{stdout} or to catch the same output into variable using  \texttt{\$()} construct or redirecting it to a file, because each call of  \textit{journalling.py} was a separate process whose output could be controlled. When using Daemon however, this is no longer possible, either all output would be caught or none at all.
+A way how to differentiate which \textit{journalling.py's} output is supposed to be printed to \texttt{stdout} and which is supposed to be returned to \textit{journal.sh} through Named pipe had to be implemented. Functions that need to catch the Daemon's output now use  \texttt{rlJournalPrintText()} with the optional argument. How it affects \textit{daemon\_journalling.py} is described in next subsection.
+Currently unused function \texttt{rlJournalPrint()} was reworked is the same way.
 
-Before the Daemon enters the endless loop, it performs checks whether environment is prepared for it (whether Named pipe exists or it can access test's PID)  
+\subsection{journalling\_daemon.py}
+\textit{journalling.py} script again originates from \textit{journalling.py}. This time however, it is designed to run in endless loop, instead of returning after one executed action.
 
-\section{testing that my solution is the same}
+Before the Daemon enters the endless loop, it performs checks whether environment is prepared for it (whether Named pipe exists or it can access test's PID). Only if all checks are successfully verified it enters the loop, otherwise exits with error. 
+
+In each iteration it checks whether test's  process is still running analogously to how \texttt{rljCallDaemon()} does it. Then it reads the Named pipe and waits there until \texttt{rljCallDaemon()} writes to it. After message is read, method \texttt{parseAndProcess()} is called and it parses the message and acts upon it. 
+
+If the message received comes from \texttt{rlJournalStart()} the XML object is initialized and stored in \texttt{global} variable \texttt{jrml} so it its accessible to all other methods that use the XML object.
+
+As was stated in previous subsection, change in outputting behavior had to be implemented. When optional argument \texttt{toVar} is detected all functions related to printing instead of \texttt{print} function store their respective outputs in variables. These are gradually appended to each other and at the end of all printing they are instead returned through Named pipe back to \textit{journal.sh} where individual functions can catch them.
+
+Any other message call the same methods as in original implementation with the difference which is that now the methods use the \texttt{global jrnl}.
+
+When a message is processed, \texttt{parseAndProcess()} must encode the response, because original implementation was able to respond with either \texttt{return code} or \texttt{string} and this solution is only ably to respond with \texttt{string}. Simple format \texttt{message:X-code:Y}, where X is replace with \texttt{string} and Y with \texttt{return code}, was implemented which is quickly decoded by \texttt{rljCallDaemon()} using Regular expression\cite{regex}.
+
+\subsection{Signals}
+Signals are asynchronous interrupts that are used for inter-process communication. Signals are usually used by the operating system to notify processes that some event occurred.\cite{signals}
+Signal handlers are functions that are called when program receives signal to handle the event properly. In Daemon solution Signal handlers were added to both Daemon and bash side of BeakerLib.
+
+
+
+%\section{testing that my solution is the same} ??? 
 
 \chapter{Performance measuring}
 \label{performance}
