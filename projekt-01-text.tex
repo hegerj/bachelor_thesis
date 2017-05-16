@@ -7,12 +7,16 @@
 Focus of this thesis is a performance optimization of Red Hat's BeakerLib library, particularly its Journal feature. <expand>
 \\
 \\
-The thesis is structured in a following way: chapter \ref{relevant_projects} introduces projects relevant to BeakerLib and its testing environment. Chapter \ref{beakerlib_chapter} explains more in-depth how BeakerLib works, with focus on its Journal feature and analysis of its performance. In the chapter \ref{solutions} possible optimizations are discussed and chapter \ref{implementations} focuses on implementation of proposed solutions. The chapter \ref{performance} then describes how was performance measured and in what environment. <expand>
+The thesis is structured in a following way: chapter \ref{relevant_projects} introduces projects relevant to BeakerLib and its testing environment. Chapter \ref{beakerlib_chapter} explains more in-depth how BeakerLib works, with focus on its Journal feature and analysis of its performance. 
+
+In the chapter \ref{solutions} possible optimizations are discussed and chapter \ref{implementations} focuses on implementation of proposed solutions. The chapter \ref{performance} then describes how was performance measured and in what environment. Chapter \ref{results}  is dedicated to analyses of measured results. 
+
+Lastly chapter \ref{conclusion} sums up implemented solutions a  considers possible future work on BeakerLib.
 
 \chapter{Relevant projects}
 \label{relevant_projects}
 
-This this chapter describes BeakerLib and projects relevant to it. Nejprve je popsana knihovna jako takova, nasledujici sekce se venuje Beaker coz je system from which BeakrLib originally  a posledni sekce popisuje test harnessy
+This this chapter describes BeakerLib and projects relevant to it. First of all brief summary of BeakerLib itself is presented. Next section is devoted to Beaker system and last section  Nejprve je popsana knihovna jako takova, nasledujici sekce se venuje Beaker coz je system from which BeakrLib originally  a posledni sekce popisuje test harnessy
 
 \section{BeakerLib}
 
@@ -27,7 +31,7 @@ Main features of BeakerLib include:
 \end{itemize}
 
 
-This thesis focuses on BeakerLib Journal and problem it causes with long tests. ??? Which will be described in chapter ...
+This thesis focuses on BeakerLib Journal feature and problem it causes with long tests. Which is in more detail described in chapter \ref{beakerlib_chapter}.
 
 
 \section{Beaker}
@@ -35,7 +39,7 @@ This thesis focuses on BeakerLib Journal and problem it causes with long tests. 
 Beaker\cite{beaker_doc} is a full stack software and hardware integration testing system, with the ability to manage a globally distributed network of test labs.  It is Red Hat community project under GNU General Public License version 2.
 
 Main functionality includes management of hardware inventory, on which Beaker can install wide variety  of operating systems from Red Hat Linux family. Another notable part  is Task library which contains rpm packages of individual tests which can be run on provided machines. 
-Users then can specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  After Test Harness finishes running the tests, results are sent back to Beaker where they are stored for specified period of time. 
+Users then can specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  Test Harness install and executes them while continuously sending results back to Beaker where they are stored for specified period of time. 
 
 \subsection{beaker-wizard}
 Part of Beaker package. Interactive command-line tool which automates creation of BeakerLib tests. Using predefined or user-defined templates it creates all files that are needed to run BeakerLib test. 
@@ -44,7 +48,7 @@ Part of Beaker package. Interactive command-line tool which automates creation o
 \section{Test Harness}
 Test harness is a software framework that automates test execution. It contains tests to be run, executes them and reports results. <expand>
 
-Beaker’s harnesses prepare provided machine for BeakerLib by setting environmental variables to proper values, and then running the tests.
+Beaker’s harnesses prepare provided machine for BeakerLib by setting environmental variables to proper values, and then consecutively execute each test, while continuously reporting back results. They are integral part of Beaker ecosystem, as they allow user to run long test sets, whcih would without harness require much of manual work.
 
 \subsection{Beah harness}
 Beah \cite{beah_doc} is a default Beaker harness . <expand> 
@@ -53,7 +57,7 @@ Beah \cite{beah_doc} is a default Beaker harness . <expand>
 Restraint \cite{restraint_doc} is an alternative Beaker harness which can, unlike Beah, run with Beaker or standalone without it. <expand>
 
 \section{Projects' relation}
-Relation between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beaker_relation}. In this example user submits Beaker job containing three tests and hardware/software requirements for a machine the tests should run on. After Beaker reserves it, it installs Harness which successively executes each test and uploads their results back to Beaker when user can access them.
+Relation between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beaker_relation}. In this example user submits Beaker job containing three tests and hardware/software requirements for a machine the tests should run on. After Beaker reserves it, it installs operating system and Harness which then successively executes each test and uploads their results back to Beaker when user can access them.
 
 \begin{figure}[h!]
   \includegraphics[width=\linewidth]{beaker_relations.png}
@@ -64,31 +68,31 @@ Relation between Beaker, Harness and BeakerLib is shown in figure \ref{fig:beake
 \chapter{BeakerLib}
 \label{beakerlib_chapter}
 
-This chapter takes a closer look on inner workings of BeakerLib, with focus on Journal feature and performance issues it suffers from.
+This chapter takes a closer look on inner workings of BeakerLib, with focus on Journal feature and performance issues it suffers from. 
 
 \section{Important functions}
 As stated earlier BeakerLib is shell-level library with functions that make writing and running tests easier as well as examining their results.
 BeakerLib adds testing functions to \texttt{shell} functionality, so user can combine normal \texttt{shell} commands and constructions with helping functions which can make writing tests and examining their results easier. There is close to 80 of these functions (also known as \textbf{rlCommands}), description of most used ones follows:
 \begin{itemize}
-\item \textbf{rlRun} - First argument of this function is any shell command, which is executed by rlRun. Second is an expected exit code of first argument, it can contain one or more codes. Third argument is a comment. BeakerLib logs \texttt{FAIL} or \texttt{PASS} if expected exit code differs or not from actual one respectively along with comment. This is most used and important function.
-\item \textbf{rlPass} - Manual assertion and logging of \texttt{PASS}. Useful when in combination with if statement which user doesn't want to appear in logs but still wants to log its result. Reciprocal function \textbf{rlFail} exists as well.
-\item \textbf{rlAssertExists} - Asserts whether file given as a first argument exists.
-\item \textbf{rlAssertGrep} - Function logs \texttt{PASS} when pattern given as first argument matches in a file which is given a second argument. Optional flags are passed to \texttt{grep} and behave the same way.
-\item \textbf{rlAssertRpm} - Function asserts \texttt{PASS} when package given as first argument is installed.  Optional arguments allow specifying particular version, release or arch of the package.
-\item \textbf{rlAssertDiffer} - Asserts whether two files given as argument differ in their content. 
-\item \textbf{rlJournalStart} - This function is used at the start of each test. It is essential for proper run of the test as it initializes BeakerLib's  outputs, which described later in this chapter. Reciprocal function \textbf{rlJournalEnd} must be called at the end of the test.
-\item \textbf{rlPhaseStart} - This function starts user-defined phase. Function takes two arguments, first one is a type of phase, second one is a name. Phase must be ended by calling \textbf{rlPhaseEnd}. Phases are more closely explained in the next section.
+\item \texttt{rlRun()} - First argument of this function is any \texttt{shell} command, which is executed by \texttt{rlRun()}. Second is an expected exit code of first argument, it can contain one or more codes. Third argument is a comment. BeakerLib logs \texttt{FAIL} or \texttt{PASS} if expected exit code differs or not from actual one respectively along with comment. This is most used and important function.
+\item \texttt{rlPass()} - Manual assertion and logging of \texttt{PASS}. Useful when in combination with if statement which user doesn't want to appear in logs but still wants to log its result. Reciprocal function \texttt{rlFail()} exists as well.
+\item \texttt{rlAssertExists} - Asserts whether file given as a first argument exists.
+\item \texttt{rlAssertGrep()} - Function logs \texttt{PASS} when pattern given as first argument matches in a file which is given a second argument. Optional flags are passed to \texttt{grep} and behave the same way.
+\item \texttt{rlAssertRpm()} - Function asserts \texttt{PASS} when package given as first argument is installed.  Optional arguments allow specifying particular version, release or arch of the package.
+\item \texttt{rlAssertDiffer()} - Asserts whether two files given as argument differ in their content. 
+\item \texttt{rlJournalStart()} - This function is used at the start of each test. It is essential for proper run of the test as it initializes BeakerLib's  outputs, which described later in this chapter. Reciprocal function \textbf{rlJournalEnd()} must be called at the end of the test.
+\item \texttt{rlPhaseStart()} - This function starts user-defined phase. Function takes two arguments, first one is a type of phase, second one is a name. Phase must be ended by calling \textbf{rlPhaseEnd()}. Phases are more closely explained in the next section.
 \end{itemize}
 
 \section{Phases}
 BeakerLib divides tests into logical groups called Phases. There are three predefined types of phases:
 \begin{itemize}
-\item Setup - Preparing conditions for the test (such as creating temporary files, starting needed system services and so on), started by calling \textbf{rlPhaseStartSetup}.
-\item Test - Main phase for testing, started by calling \textbf{rlPhaseStartTest}.
-\item Cleanup - Reverting changes made by the test, started by calling \mbox{\textbf{rlPhaseStartCleanup}}.
+\item Setup - Preparing conditions for the test (such as creating temporary files, starting needed system services and so on), started by calling \texttt{rlPhaseStartSetup()}.
+\item Test - Main phase for testing, started by calling \texttt{rlPhaseStartTest()}.
+\item Cleanup - Reverting changes made by the test, started by calling \mbox{\texttt{rlPhaseStartCleanup()}}.
 \end{itemize}
 
-Apart from predefined Phases, user can also define own phases by calling \textbf{rlJournalStart} function. First argument of the function is a one of two types phase can have:
+Apart from predefined Phases, user can also define own phases by calling \texttt{rlPhaseStart()} function. First argument of the function is a one of two types phase can have:
 
 \begin{itemize}
 \item WARN - if any \textbf{rlCommand} in phase of this type fails, whole phase will result in Warning state.
@@ -107,6 +111,8 @@ example test \ref{lst:test_example} shows how basic BeakerLib test looks.
 # Include Beaker environment
 . /usr/bin/rhts-environment.sh || exit 1
 . /usr/share/beakerlib/beakerlib.sh || exit 1
+
+PACKAGE=bash
 # Start of Journal
 rlJournalStart
     # Start of Setup Phase, creating temp directory where test will take place 
@@ -131,7 +137,7 @@ rlJournalEnd
 \end{lstlisting}
 
 \section{BeakerLib's output}
-BeakerLib produces three kinds of outputs, two file formats and a console one which are described in this section. Files are saved into a directory created for each individual test. If the test is run locally, temporary directory is created on system with \texttt{mktepm} command. If run on Beaker unique \textbf{TESTID} is generated for each test. This \textbf{TESTID} serves as a name for test directory as well as identifier which Beaker later uses when connecting test results with correct test.
+BeakerLib produces three kinds of outputs. Two file formats and a console one in case of local testing or three file formats when testing remotely.
 
 \subsection{journal.txt}
 \textit{journal.txt} is a plain text file with human readable record of test's progress. After end of each phase, copy of the file is sent to Beaker for storage. Snippet of \textit{journal.txt} generated by Example test \ref{lst:test_example} is shown in \ref{lst:journaltxt_example}.
@@ -141,7 +147,6 @@ BeakerLib produces three kinds of outputs, two file formats and a console one wh
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: [   LOG    ] :: Setup
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 :: [   PASS   ] :: Checking for the presence of bash rpm
 :: [   LOG    ] :: Package versions:
 :: [   LOG    ] ::   bash-4.3.43-4.fc25.x86_64
@@ -150,32 +155,26 @@ BeakerLib produces three kinds of outputs, two file formats and a console one wh
 :: [   LOG    ] :: Duration: 1s
 :: [   LOG    ] :: Assertions: 3 good, 0 bad
 :: [   PASS   ] :: RESULT: Setup
-
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: [   LOG    ] :: Test
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 :: [   PASS   ] :: Creating the foo test file (Expected 0, got 0)
 :: [   PASS   ] :: File foo should exist
 :: [   PASS   ] :: Listing the foo test file (Expected 0, got 0)
 :: [   LOG    ] :: Duration: 0s
 :: [   LOG    ] :: Assertions: 3 good, 0 bad
 :: [   PASS   ] :: RESULT: Test
-
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: [   LOG    ] :: Cleanup
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 :: [   PASS   ] :: Command 'popd' (Expected 0, got 0)
 :: [   PASS   ] :: Removing tmp directory (Expected 0, got 0)
 :: [   LOG    ] :: Duration: 0s
 :: [   LOG    ] :: Assertions: 2 good, 0 bad
 :: [   PASS   ] :: RESULT: Cleanup
-
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: [   LOG    ] :: /examples/basic/Sanity/basic-test
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 :: [   LOG    ] :: Phases: 3 good, 0 bad
 :: [   PASS   ] :: RESULT: /examples/basic/Sanity/basic-test
 \end{lstlisting}
@@ -191,10 +190,72 @@ If the executed test is connected to an \texttt{interactive shell} similar, huma
 \end{figure}
 
 \subsection{TESTOUT.log}
-If the executed test is not connected to an \texttt{interactive shell}, the same text as in Console's output is printed into file \textit{TESTOUT.log}. This is mostly the case when executing a test remotely (for example in Beaker), where it is not possible to see the Console output.
+If the executed test is not connected to an \texttt{interactive shell}, the same text generated for Console's output is printed into the file \textit{TESTOUT.log}. This is mostly the case when executing a test remotely (for example in Beaker), where it is not possible to see the Console output.
 
 \subsection{journal.xml}
-Last output is a an XML\footnote{eXtensible Markup Language} file. This document is stripped off of executed commands' own output, but core information (such as which commands were executed, whether they passed or failed and so on) is kept. Also metadata about the test run (time of execution, which component was tested and more) as well as information about the hardware and software test was run on are added. \textit{journal.xml} is sent back to Beaker same as \textit{journal.txt} where it is available for further processing by automated tools. It also serves as a source of information about current state of the test during its execution, for example whether there is currently an open phase or how many failed tests or phases there are so far.
+Last output is a an XML\footnote{eXtensible Markup Language} file. XML is a markup language, designed to store and transport data.\cite{xml_into} 
+
+\textit{journal.xml} is stripped off of executed commands' own output, but core information (such as which commands were executed, whether they passed or failed and so on) is kept. Also metadata about the test run (time of execution, which component was tested and more) as well as information about the hardware and software test was run on are added. \textit{journal.xml} is sent back to Beaker same as \textit{journal.txt} where it is available for further processing by automated tools. It also serves as a source of information about current state of the test during its execution, for example whether there is currently an open phase or how many failed tests or phases there are so far. Example of \textit{journal.xml} generated by Example test \ref{lst:test_example} is shown in \ref{lst:journalxml_example}.
+
+\begin{lstlisting}[style=xml_journal,caption={Example of journal.xml},label={lst:journalxml_example}]
+<?xml version="1.0"?>
+<BEAKER_TEST>
+  <package>basic</package>
+  <pkgnotinstalled>basic</pkgnotinstalled>
+  <beakerlib_rpm>beakerlib-1.15-1.fc25</beakerlib_rpm>
+  <beakerlib_redhat_rpm>beakerlib-redhat-1-6.fc16</beakerlib_redhat_rpm>
+  <starttime>2017-05-15 22:15:24 CEST</starttime>
+  <endtime>2017-05-15 22:15:25 CEST</endtime>
+  <testname>/examples/basic/Sanity/basic-test</testname>
+  <release>Fedora release 25 (Twenty Five)</release>
+  <hostname>localhost.localdomain</hostname>
+  <arch>x86_64</arch>
+  <hw_cpu>4 x Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz</hw_cpu>
+  <hw_ram>19496 MB</hw_ram>
+  <hw_hdd>459.8 GB</hw_hdd>
+  <purpose>PURPOSE of /examples/basic/Sanity/basic-test
+Description: few simple commands
+Author: Jakub Heger &lt;jheger@redhat.com&gt;
+</purpose>
+  <log>
+    <phase endtime="2017-05-15 22:15:25 CEST" name="Setup" result="PASS"
+score="0" starttime="2017-05-15 22:15:24 CEST" type="WARN">
+      <pkgdetails sourcerpm="bash-4.3.43-4.fc25.src.rpm">bash-4.3.43-4.fc25.x86_64 </pkgdetails>
+      <test message="Checking for the presence of bash rpm ">PASS</test>
+      <message severity="LOG">Package versions:</message>
+      <message severity="LOG">  bash-4.3.43-4.fc25.x86_64</message>
+      <test command="TmpDir=$(mktemp -d)" message="Creating tmp directory (Expected 0, got 0)">PASS</test>
+      <test command="pushd /tmp/tmp.mRRSJHcoBg" 
+message="Command 'pushd /tmp/tmp.mRRSJHcoBg' (Expected 0, got 0)">PASS</test>
+    </phase>
+    <phase endtime="2017-05-15 22:15:25 CEST" name="Test" result="PASS" score="0" 
+starttime="2017-05-15 22:15:25 CEST" type="FAIL">
+      <pkgdetails sourcerpm="bash-4.3.43-4.fc25.src.rpm">bash-4.3.43-4.fc25.x86_64 </pkgdetails>
+      <test command="touch foo" message="Creating the foo test file (Expected 0, got 0)">PASS</test>
+      <test message="File foo should exist ">PASS</test>
+      <test command="ls -l foo" message="Listing the foo test file (Expected 0, got 0)">PASS</test>
+    </phase>
+    <phase endtime="2017-05-15 22:15:25 CEST" name="Cleanup" result="PASS" score="0" 
+starttime="2017-05-15 22:15:25 CEST" type="WARN">
+      <pkgdetails sourcerpm="bash-4.3.43-4.fc25.src.rpm">bash-4.3.43-4.fc25.x86_64 </pkgdetails>
+      <test command="popd" message="Command 'popd' (Expected 0, got 0)">PASS</test>
+      <test command="rm -r /tmp/tmp.mRRSJHcoBg" 
+message="Removing tmp directory (Expected 0, got 0)">PASS</test>
+    </phase>
+    <message severity="LOG">JOURNAL XML: /var/tmp/beakerlib-SJCxN82/journal.xml</message>
+    <message severity="LOG">JOURNAL TXT: /var/tmp/beakerlib-SJCxN82/journal.txt</message>
+  </log>
+</BEAKER_TEST>
+\end{lstlisting}
+
+\subsection{BeakerLib directory}
+\label{beakerlib_dir}
+Described files are saved into a BeakerLib test directory created for each individual test. 
+
+If the test is run locally, temporary directory is created on system with \texttt{mktemp} command, which creates pseudo-random name.
+
+If run on Beaker a unique \textbf{TESTID} is generated for each test. This ID serves as a name for test directory as well as an identifier which Beaker later uses when connecting test results with correct test. It is also important in case where restart is a regular part of a test. Upon restarting the test machine the same \textbf{TESTIDs} are relayed from Beaker to Harness with information which tests were already run. Harness then continues with execution of unfinished tests, starting with test that caused the restart, in the same BeakerLib directory it did before, where there are partial results of the test, so it can continue where it left off.
+
 
 \section{Source files}
 This section describes a few of BeakerLib's source files, relevant to this thesis.
@@ -220,18 +281,17 @@ Figure \ref{fig:rl_run} illustrates simplified version of how \textbf{rlRun} pro
   \label{fig:rl_run}
 \end{figure}
 
-
 \chapter{Solution of Journaling problem}
 \label{solutions}
 
-This chapter describes proposed solutions to optimize Journaling problem. Sections in this chapter provide possible solutions to the Journaling problem. Besides explaining the principle of each solution, the sections also discuss their advantages, disadvantages and potential issues.
+Sections in this chapter provide possible solutions to the Journaling problem. Besides explaining the principle of each solution, the sections also discuss their advantages, disadvantages and potential issues.
 
 \section{Change of xml parser}
 XML parser is a program which can turn XML document into structured object in RAM\footnote{Random Access Memory}. Depending on implementation of the parser, that object is then easier to access by the program as it may provide methods to navigate the object and search it or potentially modify. 
 
-Parsing of XML in BeakerLib is done by \textit{journalling.py} script by \texttt{Python} module \texttt{xml.dom.minidom}. 
+Parsing of XML in BeakerLib is done by \textit{journalling.py} script by \texttt{Python} module \texttt{xml.dom.minidom}\cite{minidom_doc}. 
 
- \texttt{xml.dom.minidom} is a native part of \texttt{Python} from version 2.0 and provides minimal implementation of the DOM\footnote{Document Object Model} interface, with an API\footnote{Application Programming Interface} similar to that in other languages. \cite{minidom_doc}
+ \texttt{xml.dom.minidom} is a native part of \texttt{Python} from version 2.0 and provides minimal implementation of the DOM\footnote{Document Object Model} interface, with an API\footnote{Application Programming Interface} similar to that in other languages. 
 
 I decided to change parser to different one, to measure whether it will provide better performance. Because of reasons of backward compatibility with RHEL 5\footnote{Red Hat Enterprise Linux 5} which needs to be supported by BeakerLib, the choice of XML parsers was limited to native modules of \texttt{Python 2.4.3}. Two additional XML parsers were present for given version.
 
@@ -299,40 +359,66 @@ This section deals with implementation of \textbf{queue file} solution. It is di
 It is a plain text file, each line containing one buffered command for \texttt{Python} script to process later, on demand. 
 
 \subsection{journal.sh}
-Creation of  \textbf{queue file}, by using \texttt{touch} command, was added to function \textbf{rlJournalStart()} which initializes Journaling functionality. It also \texttt{exports} new variable BEAKERLIB\_QUEUE, with \textbf{queue file's} path, into test's environment so \texttt{Python} script \textit{od\_journalling.py}, can later access it.
+Creation of  \textbf{queue file}, by using \texttt{touch} command, was added to function \texttt{rlJournalStart()} which initializes Journaling functionality. Using \texttt{touch} assures that if the \textbf{queue file} already exists (which happens when test run is interrupted and started again), its content is not deleted (in case of restart of the testing machine as described in section \ref{beakerlib_dir}).
 
-Original calling of \textit{journalling.py}, which is a main functionality of \textit{journal.sh}, was replaced in one of two ways:
+It now also \texttt{exports} new variable \textbf{BEAKERLIB\_QUEUE}, with \textbf{queue file's} path, into test's environment so \texttt{Python} script \textit{od\_journalling.py}, can later access it.
+
+Original calling of \textit{journalling.py} script, which is a main functionality of \textit{journal.sh}, was replaced in one of two ways:
 
 \begin{itemize}
-\item Delayed calling - New function \textbf{rljPrintToQueue()} takes all arguments that were originally meant for \textit{journalling.py} and instead prints them into \textbf{queue file}, where it will be processed by \textit{od\_journalling.py} later during execution of the test. This concerns functions which do not necessary require response about current test state from \textit{journal.xml}.  Namely functions: rlJournalPrint(), rljAddTest(), rljAddMetric(), rljAddMessage(), rljRpmLog()
+\item Delayed calling - New function \texttt{rljPrintToQueue()} takes all arguments that were originally meant for \textit{journalling.py} and instead prints them into \textbf{queue file}, where it will be processed by \textit{od\_journalling.py} later during execution of the test. This concerns functions which do not necessary require response about current test state from \textit{journal.xml}.  Namely functions: \texttt{rlJournalPrint()}, \texttt{rljAddTest()}, \texttt{rljAddMetric()}, \texttt{rljAddMessage()}, \texttt{rljRpmLog()}
 \item Immediate calling of \textit{od\_journalling.py} - Virtually the same as the original solution. These functions require immediate response. Using this way of calling won't save on any CPU load (in fact the the load will be slightly higher than before because of operations related to \textbf{queue file} processing), however in typical BeakerLib test these functions are in minority compared to previous type of calling.  Functions and the response they require are:  
 \begin{itemize}
-\item rlJournalStart() - requires confirmation that journal was initiated successfully
-\item rlJournalPrintText() - requires \textit{journal.txt} which is generated from current \mbox{\textit{journal.xml}}
-\item rlGetTestState()  - requires number of failed asserts in the test so far
-\item rlGetPhaseState() - requires number of failed phases in the test so far
-\item rljAddPhase() - requires immediate print
-\item rljClosePhase() - requires result of closed phase, to send it to Beaker along with Journal
-\item rlJournalStart()
+\item \texttt{rlJournalStart()} - requires confirmation that journal was initiated successfully
+\item \texttt{rlJournalPrintText()} - requires \textit{journal.txt} which is generated from current \mbox{\textit{journal.xml}}
+\item \texttt{rlGetTestState()}  - requires number of failed asserts in the test so far
+\item \texttt{rlGetPhaseState()} - requires number of failed phases in the test so far
+\item \texttt{rljAddPhase()} - requires immediate print
+\item \texttt{rljClosePhase()} - requires result of closed phase, to send it to Beaker along with Journal
+\item \texttt{rlJournalStart()}
 \end{itemize}
 \end{itemize}
 
-Function \textbf{rljAddTest()} is the cause of the most calls of \textit{journalling.py} in original solution, therefore had the highest need to be moved into group of functions with Delayed calling. However it does require knowledge of current state of the test. That being situation when Assert (rlCommand using \textbf{rljAddTest()} for Journaling) is used outside of a phase, such information is held only in current \textit{journal.xml}. To solve this problem functionality of  \textbf{rljAddTest()} had to moved into \textit{{od\_journalling.py}} script, discussed in the next subsection.
+Function \texttt{rljAddTest()} is the cause of the most calls of \textit{journalling.py} in original solution, therefore had the highest need to be moved into group of functions with Delayed calling. However it does require knowledge of current state of the test. That being situation when Assert (rlCommand using \texttt{rljAddTest()} for Journaling) is used outside of a phase, such information is held only in current \textit{journal.xml}. To solve this problem functionality of  \texttt{rljAddTest()} had to moved into \textit{{od\_journalling.py}} script, discussed in the next subsection.
 
-Apart from printing to \textbf{queue file}, \textbf{rljPrintToQueue} also has to escape given arguments. This done because firstly some of the arguments originating from user may contain newline character which would break the"one buffered command per line" rule in  \textbf{queue file's} format and secondly so \textit{od\_journalling.py} may parse it with \texttt{optparse} module.
+Apart from printing to \textbf{queue file}, \texttt{rljPrintToQueue()} also has to escape given arguments. This done because firstly some of the arguments originating from user may contain newline character which would break the"one buffered command per line" rule in  \textbf{queue file's} format and secondly so \textit{od\_journalling.py} may parse it with \texttt{optparse} module.
 Escaping is done with \texttt{printf} bash builtin\cite{bash_builtins}, specifically its \texttt{\%q} option which causes \texttt{printf} to output in \texttt{shell-quoted} format.
 
 \subsection{od\_journalling.py}
 File \textit{od\_journalling.py} originated from \textit{journalling.py} but it differs in some ways.
 
-Now when it is called, it first parses current \textit{journal.xml} and then calls new method \texttt{updateXML()} with parsed XML object as an argument. This method opens \textbf{queue file} and finds last line it accessed in previous call. From there it reads buffered lines, which are decoded from escaped and modifies the XML object accordingly.When it reaches end of file, it makes a mark for future readings and returns to the original call coming from one of the \textit{journal.sh's}  Immediate calling functions. After modification from that function it generates response and returns it to \textit{journal.sh}. Exceptions to this behavior are calls  from rlJournalStart(), which doesn't access textbf{queue file} but only initializes XML object and returns exit code whose value depends on how was initialization successful and rlJournalEnd() which makes sure every buffered command was processed as it is an exit point from the test.
+Now when it is called, it first parses current \textit{journal.xml} and then calls new method \texttt{updateXML()} with parsed XML object as an argument. This method opens \textbf{queue file} and finds last line it accessed in previous call. From there it reads buffered lines, and modifies the XML object accordingly in the similar way it did originally, this time however without parsing \textit{journal.xml} each time as the XML object is passed as an argument to appropriate methods. 
+
+When it reaches end of file, it makes a mark for future readings and returns to the original call coming from one of the \textit{journal.sh's}  Immediate calling functions. After modification from that function it generates response and returns it to \textit{journal.sh}. 
+
+Exceptions to this behavior are calls  from \texttt{rlJournalStart()}, which doesn't access \textbf{queue file} but only initializes XML object and returns exit code whose value depends on how was initialization successful and \texttt{rlJournalEnd()} which makes sure every buffered command was processed as it is an exit point from the test.
+
+As mentioned in previous subsection, functionality of  \texttt{rljAddTest()} had to be altered. Given that bash side of BeakerLib had no way of knowing if the test was added outside of phase at the time of writing this operation into the \textbf{queue file}, this action had to be resolved when \textit{od\_journalling.py} processed the \textbf{queue file}. 
+New method \texttt{testOutOfPhase()} was implemented which is called when assertion outside of phase is detected and it performs the same process as when this event happened in original \textit{journal.sh}.
 
 \subsection{Problems with implementation}
 Main goal of this solution was to reduce number of times \textit{journal.xml} is parsed, by delaying as many Journaling operations as possible, while keeping BeakerLib's outputs the same. The way BeakerLib is designed now it is not possible, because some information is always lost when operations are delayed. In case of this implementation I was able to keep \textit{journal.xml}, and therefore \textit{journal.txt}  as well, the same as with original solution, however at the price Console's output which is now missing some information usually given by functions from Delayed calling category.
 
-Solving this issue would require larger changes to BeakerLib's design which I decided not to implement for now so \textbf{Queue file} solution remains only as a proof of concept.
+Solving this issue would require more extensive changes to BeakerLib's design which I decided not to implement for now so \textbf{Queue file} solution remains only as a proof of concept.
 
 \section{Daemon-like solution}
+This section is divided into subsections which describe individual changes I made to BeakerLib's design.
+
+\subsection{journal.sh}
+Function \texttt{rlJournalStart()} in this implementation creates Named pipe using \texttt{mkfifo} and then \texttt{exports} its path into environment.
+Then it spawns \textit{daemon\_journalling.py} process in the background with \texttt{\&} operator and store its \texttt{PID\footnote{Process identifier}}.
+
+Every call of \textit{journalling.py} in original implementation was replace with new function \texttt{rljCallDaemon()}, which takes the same arguments as original function. When this new function is called it firstly escapes given arguments using similar way as in \textbf{queue file}, this time however another function had to be created.  \texttt{rljCallDaemon()} passes its argument to the function \texttt{escapeArguments()} which uses \texttt{printf} and \texttt{echo} bash builtins to escape arguments in loop which are then caught back in \texttt{rljCallDaemon()} with \texttt{\$()} construct\cite{command_substitution} for catching output. It is implemented this way to avoid using temporary file.
+
+After arguments are escaped, \texttt{rljCallDaemon()} checks whether the Daemon is still running with \texttt{kill -0 \$DAEMON\_PID} call. 
+
+\texttt{kill} program is used to send signals to processes. If used with \texttt{-0} option, no signal is actually sent but error checking against the process is still performed and it returns \texttt{0} when process with given PID is running\cite{man_kill}. This is done to make sure the Daemon is still running before pipe writing operation.  If the Daemon wasn't running before writing to pipe, the test would hang there indefinitely, so if the Daemon is not running, the test exits with error.
+
+After this check is performed, \texttt{rljCallDaemon()} writes to Named pipe its escaped message, where it wait until Daemon responds. Response is read as a next action, decoded from a format that will discussed later and then response is returned to function that called \texttt{rljCallDaemon()}. 
+This is repeated until end of the test is reached.
+
+\subsection{Daemon}
+\textit{journalling\_daemon.py} script again originates from \textit{journalling.py}. This time however it designed to run in continuous loop, instead of closing after one executed action.
 
 \section{testing that my solution is the same}
 
@@ -374,7 +460,11 @@ Second round of testing was done to emulate real testing conditions and to verif
 \section{Implemented optimizations}
 <results>
 
+\chapter{Analysis of results}
+\label{results}
+
 \chapter{Conclusion}
+\label{conclusion}
 Recap of results
 \\
 Future work
