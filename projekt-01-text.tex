@@ -345,7 +345,7 @@ During changing of parsers I discovered and reported few bugs present in current
 \section{Change of xml parser}
 \subsection{Difference in parsers}
 As mentioned before I chose to change original XML parser to \texttt{lxml}. Only changes in source code were in file \textit{journalling.py} as it is only part of BeakerLib that directly works with journal's XML object. 
-Most of the changes consisted in changing \texttt{xml.dom.minidom's} method for creating new XML element and assigning value into it.
+Most of the changes were in \texttt{xml.dom.minidom's} method for creating new XML element and assigning value into it.
 Biggest difference between given parsers is that \texttt{lxml} does not provide many helping methods as \texttt{xml.dom.minidom} does.
 For example in \texttt{lxml}  there is no method \texttt{getElementsByTagName()} to search XML object by a tag name. Instead \texttt{lxml} supports \texttt{xpath} \cite{xpath} syntax for searching the object. xpath\footnote{XML Path Language} is part of XSLT\footnote{eXtensible Stylesheet Language Transformations} standard. It be can used to navigate through elements and attributes in an XML document.
 
@@ -443,7 +443,19 @@ When a message is processed, \texttt{parseAndProcess()} must encode the response
 Signals are asynchronous interrupts that are used for inter-process communication. Signals are usually used by the operating system to notify processes that some event occurred.\cite{signals}
 Signal handlers are functions that are called when program receives signal to handle the event properly. In Daemon solution Signal handlers were added to both Daemon and bash side of BeakerLib.
 
+In \textit{daemon\_journalling.py} method \texttt{signalHandler()} was created. It it set to handle most common signals, that would cause it to exit improperly. When such signal is received, Daemon interrupts what is currently doing and through \texttt{signalHandler()} calls \texttt{saveAndExit())} method which saves current state of XML object to disk and exits.
 
+\textit{journal.sh} uses \texttt{trap} command to catch signals. Upon receiving signal it \texttt{kills} Daemon to always make sure that Daemon will not stay running in the background. after test is unexpectedly ended.  
+
+\subsection{Problems with implementation}
+Using background processes with blocking operations is a rather volatile solution. In a case of some unanticipated event it may happen one side or the other may be hung up on blocking operation with no process to unblock it, even though Signal handlers were implemented to lower the chance of such a situation to happen.
+
+During testing of this solution I was not able to reproduce such behavior however testing on much larger scale would have be concluded to confirm it is unlikely such event happens.
+
+%\begin{minipage}{\linewidth}
+%\begin{lstlisting}
+%\end{lstlisting}
+%\end{minipage}
 
 %\section{testing that my solution is the same} ??? 
 
