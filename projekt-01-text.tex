@@ -318,7 +318,7 @@ The next chapter describes proposed solutions to analyzed problem with their pro
 
 Sections in this chapter provide possible solutions to the Journaling problem. Besides explaining the principle of each solution, the sections also discuss their advantages, disadvantages and potential issues.
 
-\section{Change of xml parser}
+\section{Change of XML parser}
 XML parser is a program which can turn XML document into structured object in RAM\footnote{Random Access Memory}. Depending on implementation of the parser, that object is then easier to access by the program as it may provide methods to navigate the object and search it or potentially modify. 
 
 Parsing of XML in BeakerLib is done by \textit{journalling.py} script by \texttt{Python} module \texttt{xml.dom.minidom}\cite{minidom_doc}. 
@@ -383,7 +383,7 @@ For example in \texttt{lxml}  there is no method \texttt{getElementsByTagName()}
 Another example of difference is an approach for accessing element's children. While \texttt{xml.dom.minidom} has dedicated methods and attributes such as \texttt{hasChildNodes()} which returns \texttt{bool} value or \texttt{childNodes} which is an iterable attribute of element's children, \texttt{lxml} has more low level implementation. It treats elements as \texttt{Python lists} so \texttt{hasChildNodes()} can be replaced with simple \texttt{len(element) != 0}.
 \\
 \\
-Because preliminary performance measurement showed faster test execution with \texttt{lxml}, it was decided to implement, that the rest of the proposed solutions with this parser.
+Because preliminary performance measurement showed faster test execution with \texttt{lxml}, it was decided to implement the rest of the proposed solutions with this parser.
 
 \section{Queue file solution}
 This section deals with implementation of queue file solution. It is divided into subsections that discuss files I designed or changed during implementation. 
@@ -486,7 +486,7 @@ Signals are asynchronous interrupts that are used for inter-process communicatio
 
 Signal handlers are functions that are called when program receives signal to handle the event properly. In daemon solution Signal handlers were added to both daemon and Bash side of BeakerLib.
 
-In \textit{daemon\_journalling.py} method \texttt{signalHandler()} was created. It it set to handle most common signals, that would cause it to exit improperly. When such signal is received, daemon interrupts what is currently doing and through \texttt{signalHandler()} calls \texttt{saveAndExit())} method which saves current state of XML object to disk and exits.
+In \textit{daemon\_journalling.py} method \texttt{signalHandler()} was created. It is set to handle most common signals, that would cause it to exit improperly. When such signal is received, daemon interrupts what is currently doing and through \texttt{signalHandler()} calls \texttt{saveAndExit()} method which saves current state of XML object to disk and exits.
 
 \textit{journal.sh} uses \texttt{trap} command to catch signals. Upon receiving signal it \texttt{kills} daemon to always make sure that daemon will not stay running in the background after test is unexpectedly ended.  
 
@@ -509,12 +509,12 @@ This chapter explains what performance testing is and why is ti done. Then it de
 
 Performance testing is a type of \textbf{non-functional testing}, that is testing whose goal is to test quality characteristics of a component, rather than its functionality\cite{non-functional_testing}.
 
-For performance testing of BeakerLib two kinds of tests were chosen to run, in in two kinds of testing environments. They are described in following sections.
+For performance testing of BeakerLib two kinds of tests were chosen to run, in two kinds of testing environments. They are described in following sections.
 
 \section{Tests}
 
 \subsection{Artificial tests}
-First type of tests are artificial tests created by \texttt{beaker-wizard} tool to specifically target and measure performance of Journaling modifications this thesis proposes. They consist mostly of rlCommands that directly work with \textit{journalling.py} (ot its variants of implemented modifications), for example commands \texttt{rlLog()} or \texttt{rlPhaseStart()} and \texttt{rlPhaseEnd()}. This way we can observe clear difference in performance without being affected by operations unrelated to Journaling (executing actions that verify functionality of components in real tests). 
+First type of tests are artificial tests created by \texttt{beaker-wizard} tool to specifically target and measure performance of Journaling modifications this thesis proposes. They consist mostly of rlCommands that directly work with \textit{journalling.py} (or its variants of implemented modifications), for example commands \texttt{rlLog()} or \texttt{rlPhaseStart()} and \texttt{rlPhaseEnd()}. This way we can observe clear difference in performance without being affected by operations unrelated to Journaling (executing actions that verify functionality of components in real tests). 
 
 \begin{itemize}
 \item Test1 - Test used as and example \ref{lst:test_example}. It is a very short test and for which proposed solutions were not aimed therefore increase in performance with this test is not expected. Test contains 17 rlCommands.
@@ -553,7 +553,7 @@ First environment is local laptop for convenience and speed of execution. Tests 
 \end{center}
 
 \subsection{Remote in beaker}
-Second round of testing was done to emulate real testing conditions and to verify that changes made to BeakerLib do not break functionality outside of controlled environment. Tests were run u the default test harness Beah. Technical specification were following:
+Second round of testing was done to emulate real testing conditions and to verify that changes made to BeakerLib do not break functionality outside of controlled environment. Tests were run using the default test harness Beah. Technical specification were following:
 
 \begin{center}
     \begin{tabular}{| l | l |}
@@ -570,7 +570,7 @@ Second round of testing was done to emulate real testing conditions and to verif
 Goal of this thesis was to optimize performance in regards to time of execution, so that is only the value that was measured. Values were obtained from \textit{journal.xml} which has builtin mechanisms to track how long took the execution of the test.
 
 \section{Baseline measurements}
-This section shows measured time of execution in seconds of each test with the original implementation. Each test was run 15 times and results were then averaged. Complete data set is located in Appendix \ref{appendix:data}.
+This section shows measured time of execution in seconds of each test with the original implementation. Each test was run 15 times and results were then averaged and rounded to precision of one decimal place. Complete data set is located in Appendix \ref{appendix:data}.
 
 \shorthandoff{-}
 \begin{center}
@@ -591,7 +591,7 @@ This section shows measured time of execution in seconds of each test with the o
 \shorthandon{-}
 
 \section{Implemented optimizations}
-This presents measured time of execution in seconds of each test with each of the implemented optimizations. Each test was run 15 times and results were then averaged. Complete can be seen in Appendix \ref{appendix:data}.
+This presents measured time of execution in seconds of each test with each of the implemented optimizations. The same testing as with baseline measurements took place, that is each test was run 15 times and results were then averaged and rounded to precision of one decimal place. Complete data set can be seen in Appendix \ref{appendix:data}.
 
 \subsection{lxml parser}
 
