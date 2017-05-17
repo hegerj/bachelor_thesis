@@ -102,7 +102,7 @@ Apart from predefined Phases, user can also define own phases by calling \texttt
 Basic phases Setup and Cleanup are WARN type, Test phase is a FAIL type.
 
 The result of the whole test is the same as the worst result of any phase in the order: Failed, Warning, Passed.
-Asserts must not be used outside of phases, if such a case occurs, new  
+Asserts must not be used outside of phases, if such a case occurs, a new phase opened, its result set to FAIL, then adding the stray assert into the new phase and finally to end it. 
 
 This division helps with examining the result of test as it shows which phase, if any, causes fail in BeakerLib's output. 
 example test \ref{lst:test_example} shows how basic BeakerLib test looks.
@@ -184,7 +184,7 @@ BeakerLib produces three kinds of outputs. Two file formats and a console one in
 
 \subsection{Console output}
 \label{console_out}
-If the executed test is connected to an \texttt{interactive shell} similar, human-readable, output to the \textit{journal.txt} is also printed to console's standard output (\texttt{stdout}). Apart from  \textit{journal.txt's} content console's output is complemented by executed command's output. Also \texttt{shell's} output is colored for increased readability.  Figure \ref{fig:console_output} shows snippet of such output.
+If the executed test is connected to an \texttt{interactive shell} similar, human-readable, output to the \textit{journal.txt} is also printed to console's standard output (\texttt{stdout}). Apart from  \textit{journal.txt}'s content console's output is complemented by executed command's output. Also \texttt{shell}'s output is colored for increased readability.  Figure \ref{fig:console_output} shows snippet of such output.
 
 \begin{figure}
   \includegraphics[width=\linewidth]{console_output.png}
@@ -193,7 +193,7 @@ If the executed test is connected to an \texttt{interactive shell} similar, huma
 \end{figure}
 
 \subsection{TESTOUT.log}
-If the executed test is not connected to an \texttt{interactive shell}, the same text generated for Console's output is printed into the file \textit{TESTOUT.log}. This is mostly the case when executing a test remotely (for example in Beaker), where it is not possible to see the Console output.
+If the executed test is not connected to an \texttt{interactive shell}, the same text generated for Console's output is printed into the file \textit{TESTOUT.log}. This is mostly the case when executing a test remotely (in Beaker for example), where it is not possible to see the Console output.
 
 \subsection{journal.xml}
 Last output is a an XML\footnote{eXtensible Markup Language} file. XML is a markup language, designed to store and transport data\cite{xml_intro}.
@@ -267,15 +267,15 @@ This section describes a few of BeakerLib's source files, relevant to this thesi
 \begin{itemize}
 \item \textit{beakerlib.sh} - Starting point of every tests. It is \texttt{sourced} at the beginning of each test and in turn \texttt{sources} all other BeakerLib files.
 \item \textit{testing.sh} - Contains definitions of the most used rlCommands as well as some internal functions.
-\item \textit{journal.sh} - Provides bash-side Journaling functionality. Functions from this file process information about what to log and relay them to \textit{journalling.py}.
-\item \textit{journalling.py} - Python script responsible for creating most of BeakerLib's outputs. It creates and modifies \textit{journal.xml} file.
+\item \textit{journal.sh} - Provides bash-side Journaling functionality. Functions from this file process information about what to log and relay them to \textit{journalling.py} (with \texttt{rlj} prefix) or query the \textit{journal.xml} to obtain information about the current state of the test(with standard \texttt{rl} prefix).
+\item \textit{journalling.py} - \texttt{Python} script responsible for creating most of BeakerLib's outputs. It creates and modifies \textit{journal.xml} file.
 \item \textit{logging.sh} - Complements \textit{journalling.py} in creating Console output by printing output produced but commands called with \texttt{lRun()}.
 \end{itemize}
 
 \section{Analysis of slow performance}
 It was reported that BeakerLib suffers performance problems when running long tests. Time of processing each rlCommand grew longer after many (several hundreds and more) were used. Analysis of library was problematic due to lack of documentation, complex structure and uncommented code, however thorough investigation of the source code indicated that problem lies with generating \textit{journal.xml}. 
 
-Python script \textit{journalling.py} is called after each rlCommand to log its result into \textit{journal.xml}. This isn't big problem with small test as the \textit{journal.xml} file takes up only a few kilobytes, however when the file takes up dozens or hundreds of kilobytes, repeated loading the file from disk, parsing, adding a line of log and then saving the file back to the disk adds significantly more load to CPU\footnote{Central Processing Unit}. Running larger tests therefore becomes quite time consuming and considerably slows down testing as a whole.
+Script \textit{journalling.py} is called after each rlCommand to log its result into \textit{journal.xml}. This isn't big problem with small test as the \textit{journal.xml} file takes up only a few kilobytes, however when the file takes up dozens or hundreds of kilobytes, repeated loading the file from disk, parsing, adding a line of log and then saving the file back to the disk adds significantly more load to CPU\footnote{Central Processing Unit}. Running larger tests therefore becomes quite time consuming and considerably slows down testing as a whole.
 This has been determined as the main focus of the thesis since it probably is the most significant performance bottleneck. Influence of used Harness was thought  to be negligible and won't be focused on in this thesis.
 
 Figure \ref{fig:rl_run} illustrates simplified version of how \texttt{rlRun()} propagates through different functions from BeakerLib files (which are \texttt{sourced} at the time test execution,  depicted by rounded rectangles) and how it is logged into the Journal. Figure also partially reveals complicated environment of BeakerLib, where every rlCommand is processed by many internal functions, making an understanding and developing BeakerLib difficult. 
@@ -325,14 +325,14 @@ The way BeakerLib is designed now it in most cases expects some form of return v
 \subsection{Daemon-like solution}
 Second solution is to rewrite \textit{journalling.py} script to have daemon-like behavior. 
 
-Daemons in Unix are long-running background processes that answers requests for services\cite{daemon_explanation}.
+\texttt{Daemons} in Unix are long-running background processes that answers requests for services\cite{daemon_explanation}.
 
 This solution will run XML parser as a separate background process for each test. The XML object will be stored in memory, and parsed as whole only at the beginning of journal creation and in case of restarting the test run.  
 
 This way BeakerLib can receive response about current test state immediately while still keeping CPU load minimal. Daemon-like solution however brings different obstacles.
 
 \subsubsection{Disadvantages}
-An independent, potentially long running process daemon is more prone to unplanned events such as unexpected exit. This must be addressed by both daemon (to exit as safely as possible)  and by the rest of BeakerLib (to detect that daemon is no longer running and to behave accordingly). 
+An independent, potentially long running process daemon is more vulnerable to unplanned events such as unexpected exit. This must be addressed by both daemon (to exit as safely as possible)  and by the rest of BeakerLib (to detect that daemon is no longer running and to behave accordingly). 
 
 \subsubsection{Communication}
 Inter-process communication between running test and daemon has to be created for test to inform which rlCommand is supposed to be logged and for daemon to respond with current state of XML document. This two-way communication must be synchronous to assure BeakerLib and daemon process their respective messages in correct order. I considered following options:
@@ -350,16 +350,16 @@ I chose to implement communication through Named pipes because synchronization i
 \chapter{Implementation of proposed solutions}
 \label{implementations}
 This chapter describes how the proposed solutions were implemented. Each solution has its own section that describes implementation details and obstacles that were found and had to be solved during the implementation.
-During changing of parsers I discovered and reported few bugs present in current implementation of \textit{journalling.py}.
+During changing of parsers I discovered and fixed few bugs present in current implementation of \textit{journalling.py}.
 
 \section{Change of XML parser}
-\subsection{Difference in parsers}
+\subsection{Differences in parsers}
 As mentioned before I chose to change original XML parser to \texttt{lxml}. Only changes in source code were in file \textit{journalling.py} as it is only part of BeakerLib that directly works with journal's XML object. 
-Most of the changes were in \texttt{xml.dom.minidom's} method for creating new XML element and assigning value into it.
-Biggest difference between given parsers is that \texttt{lxml} does not provide many helping methods as \texttt{xml.dom.minidom} does.
+Most of the changes were in \texttt{xml.dom.minidom}'s method for creating new XML element and assigning value into it.
+The biggest difference between given parsers is that \texttt{lxml} does not provide as many helping methods as \texttt{xml.dom.minidom} does.
 For example in \texttt{lxml}  there is no method \texttt{getElementsByTagName()} to search XML object by a tag name. Instead \texttt{lxml} supports \texttt{xpath}\cite{xpath} syntax for searching the object. xpath\footnote{XML Path Language} is part of XSLT\footnote{eXtensible Stylesheet Language Transformations} standard. It be can used to navigate through elements and attributes in an XML document.
 
-Another example of difference is an approach for accessing element's children. While \texttt{xml.dom.minidom} has dedicated methods and attributes such as \texttt{hasChildNodes()} which returns \texttt{bool} value or \texttt{childNodes} which is a iterable attribute of element's children, \texttt{lxml} has more low level implementation. It treats elements as python lists so \texttt{hasChildNodes()} can be replaced with simple \texttt{len(element) != 0}.
+Another example of difference is an approach for accessing element's children. While \texttt{xml.dom.minidom} has dedicated methods and attributes such as \texttt{hasChildNodes()} which returns \texttt{bool} value or \texttt{childNodes} which is a iterable attribute of element's children, \texttt{lxml} has more low level implementation. It treats elements as \texttt{Python lists} so \texttt{hasChildNodes()} can be replaced with simple \texttt{len(element) != 0}.
 \\
 \\
 Because preliminary performance measurement showed faster test execution with \texttt{lxml}, I decided to implement the rest of the proposed solutions with this parser.
@@ -369,48 +369,53 @@ This section deals with implementation of queue file solution. It is divided int
 
 \subsection{Queue file}
 Queue file was designed in a way so it was simple to implement, in a human readable format for potential test debugging and easy to extend by new, future functions that will work with it. 
-It is a plain text file, each line containing one buffered command for \texttt{Python} script to process later, on demand. 
+It is a plain text file, each line containing one buffered message for \texttt{Python} script to process later, on demand. Messages are kept in the same format as original solution uses for calling \textit{journalling.py} to preserve consistency with the exception that they are now escaped, which is described in section.
 
 \subsection{journal.sh}
 Creation of  queue file, by using \texttt{touch} command, was added to function \texttt{rlJournalStart()} which initializes Journaling functionality. Using \texttt{touch} assures that if the queue file already exists (which happens when test run is interrupted and started again), its content is not deleted (in case of restart of the testing machine as described in section \ref{beakerlib_dir}).
 
-It now also \texttt{exports} new variable \texttt{BEAKERLIB\_QUEUE}, with queue file's path, into test's environment so \texttt{Python} script \textit{od\_journalling.py}, can later access it.
+It now also \texttt{exports} new variable \texttt{BEAKERLIB\_QUEUE}, with queue file's path, into test's environment so \texttt{Python} script \textit{queued\_journalling.py}, can later access it.
 
 Original calling of \textit{journalling.py} script, which is a main functionality of \textit{journal.sh}, was replaced in one of two ways:
 
 \begin{itemize}
-\item Delayed calling - New function \texttt{rljPrintToQueue()} takes all arguments that were originally meant for \textit{journalling.py} and instead prints them into queue file, where it will be processed by \textit{od\_journalling.py} later during execution of the test. This concerns functions which do not necessary require response about current test state from \textit{journal.xml}.  Namely functions: \texttt{rlJournalPrint()}, \texttt{rljAddTest()}, \texttt{rljAddMetric()}, \texttt{rljAddMessage()}, \texttt{rljRpmLog()}
-\item Immediate calling of \textit{od\_journalling.py} - Virtually the same as the original solution. These functions require immediate response. Using this way of calling won't save on any CPU load (in fact the the load will be slightly higher than before because of operations related to queue file processing), however in typical BeakerLib test these functions are in minority compared to previous type of calling.  Functions and the response they require are:  
+\item Delayed calling - New function \texttt{rljPrintToQueue()} takes all arguments that were originally meant for \textit{journalling.py} and instead prints them into the queue file, where it will be processed by \textit{queued\_journalling.py} later during execution of the test. This concerns functions which do not necessarily require response about current test state from \textit{journal.xml}.  In original solution responses to these functions were only \texttt{exit codes} which they did not utilize in any way or if they did theirs functionality was re-implemented. Namely functions that use delayed calling are: \texttt{rlJournalPrint()}, \texttt{rljAddTest()}, \texttt{rljAddMetric()}, \texttt{rljAddMessage()}, \texttt{rljRpmLog()}
+\item Immediate calling of \textit{queued\_journalling.py} - Essentially the same as the original solution. These functions require immediate response. Using this way of calling won't save on any CPU load (in fact the the load will be slightly higher than before because of operations related to queue file processing), however in typical BeakerLib test these functions are in minority compared to previous type of calling.  Functions and the response they require are:  
 \begin{itemize}
 \item \texttt{rlJournalStart()} - requires confirmation that journal was initiated successfully
 \item \texttt{rlJournalPrintText()} - requires \textit{journal.txt} which is generated from current \mbox{\textit{journal.xml}}
 \item \texttt{rlGetTestState()}  - requires number of failed asserts in the test so far
 \item \texttt{rlGetPhaseState()} - requires number of failed phases in the test so far
-\item \texttt{rljAddPhase()} - requires immediate print
+\item \texttt{rljAddPhase()} - requires immediate print of name of the new phase to Console output
 \item \texttt{rljClosePhase()} - requires result of closed phase, to send it to Beaker along with Journal
-\item \texttt{rlJournalStart()}
+\item \texttt{rlJournalEnd()} - requires immediate print of \textit{journal.txt} which is generated from \textit{journal.xml}
 \end{itemize}
 \end{itemize}
 
-Function \texttt{rljAddTest()} is the cause of the most calls of \textit{journalling.py} in original solution, therefore had the highest need to be moved into group of functions with Delayed calling. However it does require knowledge of current state of the test. That being situation when Assert (rlCommand using \texttt{rljAddTest()} for Journaling) is used outside of a phase, such information is held only in current \textit{journal.xml}. To solve this problem functionality of  \texttt{rljAddTest()} had to moved into \textit{{od\_journalling.py}} script, discussed in the next subsection.
+Function \texttt{rljAddTest()} is the cause of the most calls of \textit{journalling.py} in original solution, therefore had the highest need to be moved into group of functions with Delayed calling. However it does require knowledge of current state of the test. That being situation when Assert (rlCommand using \texttt{rljAddTest()} for Journaling) is used outside of a phase, such information is held only in current \textit{journal.xml}. To solve this problem functionality of  \texttt{rljAddTest()} had to moved into \textit{queued\_journalling.py} script, discussed in the next subsection.
 
-Apart from printing to queue file, \texttt{rljPrintToQueue()} also has to escape given arguments. This done because firstly some of the arguments originating from user may contain newline character which would break the"one buffered command per line" rule in  queue file's format and secondly so \textit{od\_journalling.py} may parse it with \texttt{optparse} module.
+Apart from printing to queue file, \texttt{rljPrintToQueue()} also has to escape given arguments. This needs to be d
+one because firstly some of the arguments originating from user may contain newline character which would break the"one buffered command per line" rule in  queue file's format and secondly so \textit{queued\_journalling.py} may process it with \texttt{optparse} module.
 Escaping is done with \texttt{printf} bash builtin\cite{bash_builtins}, specifically its \texttt{\%q} option which causes \texttt{printf} to output in \texttt{shell-quoted} format.
 
-\subsection{od\_journalling.py}
-File \textit{od\_journalling.py} originated from \textit{journalling.py} but it differs in some ways.
+\subsection{queued\_journalling.py}
+File \textit{queued\_journalling.py} originated from \textit{journalling.py} but it differs in several ways.
 
-Now when it is called, it first parses current \textit{journal.xml} and then calls new method \texttt{updateXML()} with parsed XML object as an argument. This method opens queue file and finds last line it accessed in previous call. From there it reads buffered lines, parses each with \texttt{Python's} \texttt{optparse} module and modifies the XML object accordingly in the similar way it did originally, this time however without parsing \textit{journal.xml} each time as the XML object is passed as an argument to appropriate methods. 
+Now when it is called, it first parses current \textit{journal.xml} and then calls new method \texttt{updateXML()} with parsed XML object as an argument. This method opens queue file and finds last line it accessed in previous call. From there it reads buffered lines, parses each with \texttt{Python}'s \texttt{optparse} module and modifies the XML object accordingly in the similar way it did originally, this time however without parsing \textit{journal.xml} each time as the XML object is passed as an argument to appropriate methods. 
 
-When it reaches end of file, it makes a mark for future readings and returns to the original call coming from one of the \textit{journal.sh's}  Immediate calling functions. After modification from that function it generates response and returns it to \textit{journal.sh}. 
+When it reaches end of file, it makes a mark (by adding a line at the end of the queue file with a number already processed lines) for future readings and returns to the original call coming from one of the \textit{journal.sh}'s  Immediate calling functions. After modification from that function it generates response and returns it to \textit{journal.sh}. 
 
-Exceptions to this behavior are calls  from \texttt{rlJournalStart()}, which doesn't access queue file but only initializes XML object and returns an \texttt{exit code} whose value depends on how was initialization successful and \texttt{rlJournalEnd()} which makes sure every buffered command was processed as it is an exit point from the test.
+Exceptions to this behavior are:
+\begin{itemize}
+\item \texttt{rlJournalStart()} - This function doesn't access queue file but only initializes XML object and returns an \texttt{exit code} whose value depends on whether the initialization was successful 
+\item \texttt{rlJournalEnd()} - This one makes sure every buffered command was processed as it is an exit point from the test and so last opportunity to modify \textit{journal.xml}
+\end{itemize}
 
-As mentioned in previous subsection, functionality of  \texttt{rljAddTest()} had to be altered. Given that \texttt{bash} side of BeakerLib had no way of knowing if the test was added outside of phase at the time of writing this operation into the queue file, this action had to be resolved when \textit{od\_journalling.py} processed the queue file. 
-New method \texttt{testOutOfPhase()} was implemented which is called when assertion outside of phase is detected and it performs the same process as when this event happened in original \textit{journal.sh}.
+As mentioned in previous subsection, functionality of  \texttt{rljAddTest()} had to be altered. Given that \texttt{bash} side of BeakerLib had no way of knowing if the test was added outside of phase at the time of writing this operation into the queue file, this action had to be resolved when \textit{queued\_journalling.py} processed the queue file. 
+New method \texttt{testOutOfPhase()} was implemented which is called when assertion outside of phase is detected and it performs the same process as when this event happened in original \textit{journal.sh}, described in chapter \ref{beakerlib_chapter} in section Phases.
 
 \subsection{Problems with implementation}
-Main goal of this solution was to reduce number of times \textit{journal.xml} is parsed, by delaying as many Journaling operations as possible, while keeping BeakerLib's outputs the same. The way BeakerLib is designed now it is not possible, because some information is always lost when operations are delayed. In case of this implementation I was able to keep \textit{journal.xml}, and therefore \textit{journal.txt}  as well, the same as with original solution, however at the price Console's output which is now missing some information usually given by functions from Delayed calling category.
+Main goal of this solution was to reduce number of times \textit{journal.xml} is parsed, by delaying as many Journaling operations as possible, while keeping BeakerLib's outputs the same. The way BeakerLib is designed now it is not possible, because some information is always lost when operations are delayed. In case of this implementation I was able to keep \textit{journal.xml}, and therefore \textit{journal.txt}  as well, the same as with original solution, however at the price Console's output (therefore \textit{TESOUT.log}'s too as it is Console's output printed to file) which is now missing all information usually given by functions from Delayed calling category. 
 
 Solving this issue would require more extensive changes to BeakerLib's design which I decided not to implement for now so Queue file solution remains only as a proof of concept.
 
@@ -423,21 +428,21 @@ Then it spawns \textit{daemon\_journalling.py} process in the background with \t
 
 Every call of \textit{journalling.py} in original implementation was replace with new function \texttt{rljCallDaemon()}, which takes the same arguments as original function. When this new function is called it firstly escapes given arguments using similar way as in queue file, this time however another function had to be created.  \texttt{rljCallDaemon()} passes its argument to the function \texttt{escapeArguments()} which uses \texttt{printf} and \texttt{echo} bash builtins to escape arguments in loop which are then caught back in \texttt{rljCallDaemon()} with \texttt{\$()} construct\cite{command_substitution} for catching output. It is implemented this way to avoid using temporary file.
 
-After arguments are escaped, \texttt{rljCallDaemon()} checks whether the Daemon is still running with \texttt{kill -0 \$DAEMON\_PID} call. 
+After arguments are escaped, \texttt{rljCallDaemon()} checks whether the daemon is still running with \texttt{kill -0 \$DAEMON\_PID} call. 
 
-\texttt{kill} program is used to send signals to processes. If used with \texttt{-0} option, no signal is actually sent but error checking against the process is still performed and it returns \texttt{0} when process with given PID is running\cite{man_kill}. This is done to make sure the Daemon is still running before pipe writing operation.  If the Daemon wasn't running before writing to pipe, the test would hang there indefinitely, so if the Daemon is not running, the test exits with error.
+\texttt{kill} program is used to send signals to processes. If used with \texttt{-0} option, no signal is actually sent but error checking against the process is still performed and it returns \texttt{0} when process with given PID is running\cite{man_kill}. This is done to make sure the daemon is still running before pipe writing operation.  If the daemon wasn't running before writing to pipe, the test would hang there indefinitely, so if the daemon is not running, the test exits with error.
 
-After this check is performed, \texttt{rljCallDaemon()} writes to Named pipe escaped message, where it wait until Daemon reads it and responds. Response is read as a next action, decoded from a format that will discussed in the next subsection and then the response is returned to function that called \texttt{rljCallDaemon()}. 
-This is repeated until end of the test is reached, where function \texttt{rljJournalEnd()} sends \texttt{signal} with \texttt{kill} to end the Daemon.
+After this check is performed, \texttt{rljCallDaemon()} writes to Named pipe escaped message, where it wait until daemon reads it and responds. Response is read as a next action, decoded from a format that will discussed in the next subsection and then the response is returned to function that called \texttt{rljCallDaemon()}. 
+This is repeated until end of the test is reached, where function \texttt{rljJournalEnd()} sends \texttt{signal} with \texttt{kill} to end the daemon.
 
-Function \texttt{rlJournalPrintText()} had to be reworked slightly. It now accepts one optional argument and passes it to \texttt{rljCallDaemon()}. All current functions that use \texttt{rlJournalPrintText()} were added this argument. In original solution there was a simple way how to have \textit{journalling.py} print either to \texttt{stdout} or to catch the same output into variable using  \texttt{\$()} construct or redirecting it to a file, because each call of  \textit{journalling.py} was a separate process whose output could be controlled. When using Daemon however, this is no longer possible, either all output would be caught or none at all.
-A way how to differentiate which \textit{journalling.py's} output is supposed to be printed to \texttt{stdout} and which is supposed to be returned to \textit{journal.sh} through Named pipe had to be implemented. Functions that need to catch the Daemon's output now use  \texttt{rlJournalPrintText()} with the optional argument. How it affects \textit{daemon\_journalling.py} is described in next subsection.
+Function \texttt{rlJournalPrintText()} had to be reworked slightly. It now accepts one optional argument and passes it to \texttt{rljCallDaemon()}. All current functions that use \texttt{rlJournalPrintText()} were added this argument. In original solution there was a simple way how to have \textit{journalling.py} print either to \texttt{stdout} or to catch the same output into variable using  \texttt{\$()} construct or redirecting it to a file, because each call of  \textit{journalling.py} was a separate process whose output could be controlled. When using daemon however, this is no longer possible, either all output would be caught or none at all.
+A way how to differentiate which \textit{journalling.py}'s output is supposed to be printed to \texttt{stdout} and which is supposed to be returned to \textit{journal.sh} through Named pipe had to be implemented. Functions that need to catch the daemon's output now use  \texttt{rlJournalPrintText()} with the optional argument. How it affects \textit{daemon\_journalling.py} is described in next subsection.
 Currently unused function \texttt{rlJournalPrint()} was reworked is the same way.
 
 \subsection{journalling\_daemon.py}
 \textit{journalling.py} script again originates from \textit{journalling.py}. This time however, it is designed to run in endless loop, instead of returning after one executed action.
 
-Before the Daemon enters the endless loop, it performs checks whether environment is prepared for it (whether Named pipe exists or it can access test's PID). Only if all checks are successfully verified it enters the loop, otherwise exits with error. 
+Before the daemon enters the endless loop, it performs checks whether environment is prepared for it (whether Named pipe exists or it can access test's PID). Only if all checks are successfully verified it enters the loop, otherwise exits with error. 
 
 In each iteration it checks whether test's  process is still running analogously to how \texttt{rljCallDaemon()} does it. Then it reads the Named pipe and waits there until \texttt{rljCallDaemon()} writes to it. After message is read, method \texttt{parseAndProcess()} is called and it parses the message and acts upon it. 
 
@@ -450,26 +455,26 @@ Any other message call the same methods as in original implementation with the d
 When a message is processed, \texttt{parseAndProcess()} must encode the response, because original implementation was able to respond with either \texttt{return code} or \texttt{string} and this solution is only ably to respond with \texttt{string}. Simple format \texttt{message:X-code:Y}, where X is replace with \texttt{string} and Y with \texttt{return code}, was implemented which is quickly decoded by \texttt{rljCallDaemon()} using Regular expression\cite{regex}.
 
 \subsection{Signals}
-Signals are asynchronous interrupts that are used for inter-process communication. Signals are usually used by the operating system to notify processes that some event occurred\cite{signals}.
-Signal handlers are functions that are called when program receives signal to handle the event properly. In Daemon solution Signal handlers were added to both Daemon and bash side of BeakerLib.
+Signals are asynchronous interrupts that are used for inter-process communication. Signals are usually used by the operating system to notify processes that some event occurred\cite{signals}. For example when operating system plans to reboot, it sends signal to all running processes to inform them that reboot will take place.
 
-In \textit{daemon\_journalling.py} method \texttt{signalHandler()} was created. It it set to handle most common signals, that would cause it to exit improperly. When such signal is received, Daemon interrupts what is currently doing and through \texttt{signalHandler()} calls \texttt{saveAndExit())} method which saves current state of XML object to disk and exits.
+Signal handlers are functions that are called when program receives signal to handle the event properly. In daemon solution Signal handlers were added to both daemon and bash side of BeakerLib.
 
-\textit{journal.sh} uses \texttt{trap} command to catch signals. Upon receiving signal it \texttt{kills} Daemon to always make sure that Daemon will not stay running in the background. after test is unexpectedly ended.  
+In \textit{daemon\_journalling.py} method \texttt{signalHandler()} was created. It it set to handle most common signals, that would cause it to exit improperly. When such signal is received, daemon interrupts what is currently doing and through \texttt{signalHandler()} calls \texttt{saveAndExit())} method which saves current state of XML object to disk and exits.
+
+\textit{journal.sh} uses \texttt{trap} command to catch signals. Upon receiving signal it \texttt{kills} daemon to always make sure that daemon will not stay running in the background. after test is unexpectedly ended.  
 
 \subsection{Problems with implementation}
 Using background processes with blocking operations is a rather volatile solution. In a case of some unanticipated event it may happen one side or the other may be hung up on blocking operation with no process to unblock it, even though Signal handlers were implemented to lower the chance of such a situation to happen.
 
 During testing of this solution such behavior was not reproduced. However testing on much larger scale, including different operating systems, CPU architectures and other testing conditions, would have be concluded to confirm it is unlikely such event could occur. 
 
-\section{Verification of solutions}
+\section{Verification of implemented solutions}
 Verification that implemented optimizations didn't cause regression, was directed on \textit{journal.xml} as it is a main focus point of this thesis. Due to its nature automated verification was problematic to implement, because two \textit{journal.xml} files generated from one test may differ in many ways while both still being valid (they may differentiate in such information as time of execution, hardware/software specifications or even in reported results, as test could pass or fail independently on BeakerLib implementation).
 
 Because of this reasons only manual verification took place.
 
 \chapter{Performance measuring}
 \label{performance}
-Performance measuremnet 
 
 For performance measuring of BeakerLib I chose two kinds of tests in in two kinds of testing environments.
 
@@ -481,7 +486,7 @@ First type of tests are artificial tests created by me with \texttt{beaker-wizar
 <description of artificial tests with links to Appendix>
 
 \subsection{Real tests}
-Second type are real tests used in Red Hat. These are examples of tests that have been reported to have bad performance with BeakerLib so I am testing them to see if my modifications have real life impact on performance.
+Second type are real tests used in Red Hat. These are examples of tests that have been reported to have bad performance with BeakerLib so I am testing them to see if my modifications have real life impact on performance. Finding such tests was problematic because real tests are often written specifically for particular hardware or software and behave differently under different circumstances. The challenge then was to find tests that all have the same behavior on one specific remote machine as well as on my local machine which I used for testing.
 
 <description of real tests>
 
