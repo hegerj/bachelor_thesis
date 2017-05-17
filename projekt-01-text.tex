@@ -4,19 +4,18 @@
 % Start of text
 \chapter{Introduction}
 
-Focus of this thesis is a performance optimization of Red Hat's BeakerLib library, particularly its Journal feature. <expand>
-\\
-\\
+This thesis was written in collaboration with Red Hat software company and focuses on a performance optimization of Red Hat's BeakerLib library, particularly its Journal feature. BeakerLib library is an open source shell-level integration testing library written mostly in Bash with some functionality in Python. which provides many convenience functions to simplify writing integration and black-box tests and also automates parts of testing process. One of the key features, uniform logging mechanism called Journal, has been numerously reported by its users to perform poorly. On this basis thesis analyzes its functionality  a proposes solutions to increase performance.
+
 The thesis is structured in a following way: chapter \ref{relevant_projects} introduces projects relevant to BeakerLib and its testing environment. Chapter \ref{beakerlib_chapter} explains more in-depth how BeakerLib works, with focus on its Journal feature and analysis of its performance. 
 
-In the chapter \ref{solutions} possible optimizations are discussed and chapter \ref{implementations} focuses on implementation of proposed solutions. The chapter \ref{performance} then describes how was performance measured and in what environment. Chapter \ref{results}  is dedicated to analyses of measured results. 
+In the chapter \ref{solutions} possible optimizations are discussed and chapter \ref{implementations} focuses on implementation of proposed solutions. The chapter \ref{performance} then describes how was performance measured and in what environment. Chapter \ref{results} is dedicated to analyzing measured results of individual implemented optimizations.
 
-Lastly chapter \ref{conclusion} sums up implemented solutions a  considers possible future work on BeakerLib.
+Lastly chapter \ref{conclusion} sums up implemented solutions and considers possible future work on BeakerLib library.
 
 \chapter{Relevant projects}
 \label{relevant_projects}
 
-This this chapter describes BeakerLib and projects relevant to it. First of all brief summary of BeakerLib itself is presented. Next section is devoted to Beaker system and last section  Nejprve je popsana knihovna jako takova, nasledujici sekce se venuje Beaker coz je system from which BeakrLib originally  a posledni sekce popisuje test harnessy
+This chapter describes BeakerLib and projects relevant to it. First of all brief summary of BeakerLib itself is presented. Next section is devoted to Beaker system and the last section focuses on test harnesses.
 
 \section{BeakerLib}
 
@@ -30,19 +29,19 @@ Main features of BeakerLib include:
 \item Helpers - convenience functions for common operations such as managing system services, backup and restore of files and more
 \end{itemize}
 
-
 This thesis focuses on BeakerLib Journal feature and problem it causes with long tests. Which is in more detail described in chapter \ref{beakerlib_chapter}.
-
 
 \section{Beaker}
 
-Beaker\cite{beaker_doc} is a full stack software and hardware integration testing system, with the ability to manage a globally distributed network of test labs.  It is Red Hat community project under GNU General Public License version 2.
+Beaker is a full stack software and hardware integration testing system, with the ability to manage a globally distributed network of test labs\cite{beaker_doc}.  It is Red Hat community project under GNU General Public License version 2 and is distributed in the form of RPM package.
 
-Main functionality includes management of hardware inventory, on which Beaker can install wide variety  of operating systems from Red Hat Linux family. Another notable part  is Task library which contains rpm packages of individual tests which can be run on provided machines. 
-Users then can specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package. If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  Test Harness install and executes them while continuously sending results back to Beaker where they are stored for specified period of time. 
+Main functionality includes management of hardware inventory, on which Beaker can install wide variety  of operating systems from Red Hat Linux family. Another notable part is Task library which contains rpm packages of individual tests which can be run on provided machines. 
+Users then can specify which hardware they require with which OS and tests they want to run on it through either command-line tools or web interface both of which are part of Beaker install package. 
+
+If Beaker meets given criteria in its inventory it installs Test harness to which it gives list of tests to be run.  Test Harness install and executes them while continuously sending results back to Beaker where they are stored for specified period of time. 
 
 \subsection{beaker-wizard}
-Part of Beaker package. Interactive command-line tool which automates creation of BeakerLib tests. Using predefined or user-defined templates it creates all files that are needed to run BeakerLib test. 
+Beaker-wizard is a flexible, interactive command-line tool that is a part of Beaker RPM package. It automates creation of BeakerLib tests using predefined or user-defined templates to create all files that are needed to run BeakerLib test.  It also offers integration with git and Bugzilla, which is a web-based bug tracking system.
 ???  Common use cases
 
 \section{Test Harness}
@@ -113,7 +112,7 @@ example test \ref{lst:test_example} shows how basic BeakerLib test looks.
 . /usr/bin/rhts-environment.sh || exit 1
 . /usr/share/beakerlib/beakerlib.sh || exit 1
 
-PACKAGE=bash
+PACKAGE=beakerlib
 # Start of Journal
 rlJournalStart
     # Start of Setup Phase, creating temp directory where test will take place 
@@ -149,11 +148,11 @@ BeakerLib produces three kinds of outputs. Two file formats and a console one in
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: [   LOG    ] :: Setup
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: [   PASS   ] :: Checking for the presence of bash rpm
+:: [   PASS   ] :: Checking for the presence of beakerlib rpm 
 :: [   LOG    ] :: Package versions:
-:: [   LOG    ] ::   bash-4.3.43-4.fc25.x86_64
+:: [   LOG    ] ::   beakerlib-1.15-1.fc25.noarch
 :: [   PASS   ] :: Creating tmp directory (Expected 0, got 0)
-:: [   PASS   ] :: Command 'pushd /tmp/tmp.oawaORcDNI' (Expected 0, got 0)
+:: [   PASS   ] :: Command 'pushd /tmp/tmp.3iXfiT4GiR' (Expected 0, got 0)
 :: [   LOG    ] :: Duration: 1s
 :: [   LOG    ] :: Assertions: 3 good, 0 bad
 :: [   PASS   ] :: RESULT: Setup
@@ -161,7 +160,7 @@ BeakerLib produces three kinds of outputs. Two file formats and a console one in
 :: [   LOG    ] :: Test
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: [   PASS   ] :: Creating the foo test file (Expected 0, got 0)
-:: [   PASS   ] :: File foo should exist
+:: [   PASS   ] :: File foo should exist 
 :: [   PASS   ] :: Listing the foo test file (Expected 0, got 0)
 :: [   LOG    ] :: Duration: 0s
 :: [   LOG    ] :: Assertions: 3 good, 0 bad
@@ -175,10 +174,11 @@ BeakerLib produces three kinds of outputs. Two file formats and a console one in
 :: [   LOG    ] :: Assertions: 2 good, 0 bad
 :: [   PASS   ] :: RESULT: Cleanup
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: [   LOG    ] :: /examples/basic/Sanity/basic-test
+:: [   LOG    ] :: /performance/beakerlib/Performance/example_test
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: [   LOG    ] :: Phases: 3 good, 0 bad
-:: [   PASS   ] :: RESULT: /examples/basic/Sanity/basic-test
+:: [   PASS   ] :: RESULT: /performance/beakerlib/Performance/example_test
+
 \end{lstlisting}
 \end{minipage}
 
@@ -204,53 +204,58 @@ Last output is a an XML\footnote{eXtensible Markup Language} file. XML is a mark
 \begin{lstlisting}[style=xml_journal,caption={Example of journal.xml},label={lst:journalxml_example}]
 <?xml version="1.0"?>
 <BEAKER_TEST>
-  <package>basic</package>
-  <pkgnotinstalled>basic</pkgnotinstalled>
+  <package>beakerlib</package>
+  <pkgdetails sourcerpm="beakerlib-1.15-1.fc25.src.rpm">
+beakerlib-1.15-1.fc25.noarch </pkgdetails>
   <beakerlib_rpm>beakerlib-1.15-1.fc25</beakerlib_rpm>
   <beakerlib_redhat_rpm>beakerlib-redhat-1-6.fc16</beakerlib_redhat_rpm>
-  <starttime>2017-05-15 22:15:24 CEST</starttime>
-  <endtime>2017-05-15 22:15:25 CEST</endtime>
-  <testname>/examples/basic/Sanity/basic-test</testname>
+  <starttime>2017-05-15 09:47:44 CEST</starttime>
+  <endtime>2017-05-15 09:47:45 CEST</endtime>
+  <testname>/performance/beakerlib/Performance/example_test</testname>
   <release>Fedora release 25 (Twenty Five)</release>
   <hostname>localhost.localdomain</hostname>
   <arch>x86_64</arch>
   <hw_cpu>4 x Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz</hw_cpu>
   <hw_ram>19496 MB</hw_ram>
   <hw_hdd>459.8 GB</hw_hdd>
-  <purpose>PURPOSE of /examples/basic/Sanity/basic-test
-Description: few simple commands
+  <purpose>PURPOSE of /performance/beakerlib/Performance/example_test
+Description: example test created by beaker-wizard
 Author: Jakub Heger &lt;jheger@redhat.com&gt;
 </purpose>
   <log>
-    <phase endtime="2017-05-15 22:15:25 CEST" name="Setup" result="PASS"
-score="0" starttime="2017-05-15 22:15:24 CEST" type="WARN">
-      <pkgdetails sourcerpm="bash-4.3.43-4.fc25.src.rpm">bash-4.3.43-4.fc25.x86_64 </pkgdetails>
-      <test message="Checking for the presence of bash rpm ">PASS</test>
+    <phase endtime="2017-05-15 09:47:45 CEST" name="Setup" result="PASS" 
+score="0" starttime="2017-05-15 09:47:44 CEST" type="WARN">
+      <pkgdetails sourcerpm="beakerlib-1.15-1.fc25.src.rpm">
+beakerlib-1.15-1.fc25.noarch </pkgdetails>
+      <test message="Checking for the presence of beakerlib rpm ">PASS</test>
       <message severity="LOG">Package versions:</message>
-      <message severity="LOG">  bash-4.3.43-4.fc25.x86_64</message>
+      <message severity="LOG">  beakerlib-1.15-1.fc25.noarch</message>
       <test command="TmpDir=$(mktemp -d)" message="Creating tmp directory (Expected 0, got 0)">
 PASS</test>
-      <test command="pushd /tmp/tmp.mRRSJHcoBg" 
-message="Command 'pushd /tmp/tmp.mRRSJHcoBg' (Expected 0, got 0)">PASS</test>
+      <test command="pushd /tmp/tmp.3iXfiT4GiR" 
+message="Command 'pushd /tmp/tmp.3iXfiT4GiR' (Expected 0, got 0)">PASS</test>
     </phase>
-    <phase endtime="2017-05-15 22:15:25 CEST" name="Test" result="PASS" score="0" 
-starttime="2017-05-15 22:15:25 CEST" type="FAIL">
-      <pkgdetails sourcerpm="bash-4.3.43-4.fc25.src.rpm">bash-4.3.43-4.fc25.x86_64 </pkgdetails>
+    <phase endtime="2017-05-15 09:47:45 CEST" name="Test" result="PASS" score="0" 
+starttime="2017-05-15 09:47:45 CEST" type="FAIL">
+      <pkgdetails sourcerpm="beakerlib-1.15-1.fc25.src.rpm">
+beakerlib-1.15-1.fc25.noarch </pkgdetails>
       <test command="touch foo" message="Creating the foo test file (Expected 0, got 0)">PASS</test>
       <test message="File foo should exist ">PASS</test>
       <test command="ls -l foo" message="Listing the foo test file (Expected 0, got 0)">PASS</test>
     </phase>
-    <phase endtime="2017-05-15 22:15:25 CEST" name="Cleanup" result="PASS" score="0" 
-starttime="2017-05-15 22:15:25 CEST" type="WARN">
-      <pkgdetails sourcerpm="bash-4.3.43-4.fc25.src.rpm">bash-4.3.43-4.fc25.x86_64 </pkgdetails>
+    <phase endtime="201-05-16 09:47:45 CEST" name="Cleanup" result="PASS" score="0" 
+starttime="2017-05-15 09:47:45 CEST" type="WARN">
+      <pkgdetails sourcerpm="beakerlib-1.15-1.fc25.src.rpm">
+beakerlib-1.15-1.fc25.noarch </pkgdetails>
       <test command="popd" message="Command 'popd' (Expected 0, got 0)">PASS</test>
-      <test command="rm -r /tmp/tmp.mRRSJHcoBg" 
+      <test command="rm -r /tmp/tmp.3iXfiT4GiR" 
 message="Removing tmp directory (Expected 0, got 0)">PASS</test>
     </phase>
-    <message severity="LOG">JOURNAL XML: /var/tmp/beakerlib-SJCxN82/journal.xml</message>
-    <message severity="LOG">JOURNAL TXT: /var/tmp/beakerlib-SJCxN82/journal.txt</message>
+    <message severity="LOG">JOURNAL XML: /var/tmp/beakerlib-dI2ochw/journal.xml</message>
+    <message severity="LOG">JOURNAL TXT: /var/tmp/beakerlib-dI2ochw/journal.txt</message>
   </log>
 </BEAKER_TEST>
+
 \end{lstlisting}
 \end{minipage}
 
@@ -267,7 +272,7 @@ This section describes a few of BeakerLib's source files, relevant to this thesi
 \begin{itemize}
 \item \textit{beakerlib.sh} - Starting point of every tests. It is \texttt{sourced} at the beginning of each test and in turn \texttt{sources} all other BeakerLib files.
 \item \textit{testing.sh} - Contains definitions of the most used rlCommands as well as some internal functions.
-\item \textit{journal.sh} - Provides bash-side Journaling functionality. Functions from this file process information about what to log and relay them to \textit{journalling.py} (with \texttt{rlj} prefix) or query the \textit{journal.xml} to obtain information about the current state of the test(with standard \texttt{rl} prefix).
+\item \textit{journal.sh} - Provides Bash-side Journaling functionality. Functions from this file process information about what to log and relay them to \textit{journalling.py} (with \texttt{rlj} prefix) or query the \textit{journal.xml} to obtain information about the current state of the test(with standard \texttt{rl} prefix).
 \item \textit{journalling.py} - \texttt{Python} script responsible for creating most of BeakerLib's outputs. It creates and modifies \textit{journal.xml} file.
 \item \textit{logging.sh} - Complements \textit{journalling.py} in creating Console output by printing output produced but commands called with \texttt{lRun()}.
 \end{itemize}
@@ -278,7 +283,7 @@ It was reported that BeakerLib suffers performance problems when running long te
 Script \textit{journalling.py} is called after each rlCommand to log its result into \textit{journal.xml}. This isn't big problem with small test as the \textit{journal.xml} file takes up only a few kilobytes, however when the file takes up dozens or hundreds of kilobytes, repeated loading the file from disk, parsing, adding a line of log and then saving the file back to the disk adds significantly more load to CPU\footnote{Central Processing Unit}. Running larger tests therefore becomes quite time consuming and considerably slows down testing as a whole.
 This has been determined as the main focus of the thesis since it probably is the most significant performance bottleneck. Influence of used Harness was thought  to be negligible and won't be focused on in this thesis.
 
-Figure \ref{fig:rl_run} illustrates simplified version of how \texttt{rlRun()} propagates through different functions from BeakerLib files (which are \texttt{sourced} at the time test execution,  depicted by rounded rectangles) and how it is logged into the Journal. Figure also partially reveals complicated environment of BeakerLib, where every rlCommand is processed by many internal functions, making an understanding and developing BeakerLib difficult. 
+Figure \ref{fig:rl_run} illustrates simplified version of how \texttt{rlRun()} propagates through different functions from BeakerLib files (which are \texttt{sourced} at the time test execution,  depicted by rounded rectangles) and how it is logged into the Journal. Figure also partially reveals complicated environment of BeakerLib, where every rlCommand is processed by many internal functions, making understanding and developing BeakerLib problematic. 
 
 \begin{figure}[h!]
   \includegraphics[width=\linewidth]{rl_run.png}
@@ -287,7 +292,7 @@ Figure \ref{fig:rl_run} illustrates simplified version of how \texttt{rlRun()} p
 \end{figure}
 
 
-The next chapter describes proposed solutions to analysed problem with their pros and cons.
+The next chapter describes proposed solutions to analyzed problem with their pros and cons.
 
 
 \chapter{Solution of Journaling problem}
@@ -305,7 +310,7 @@ Parsing of XML in BeakerLib is done by \textit{journalling.py} script by \texttt
 I decided to change parser to different one, to measure whether it will provide better performance. Because of reasons of backward compatibility with RHEL 5\footnote{Red Hat Enterprise Linux 5} which needs to be supported by BeakerLib, the choice of XML parsers was limited to native modules of \texttt{Python 2.4.3}. Two additional XML parsers were present for given version.
 
 \begin{itemize}
-\item lxml - The \texttt{lxml} XML toolkit is a Pythonic binding for the C libraries libxml2 and libxslt. It combines the speed and XML feature completeness of these libraries with the simplicity of a native \texttt{Python} API\cite{lxml_doc}.
+\item lxml - The \texttt{lxml} XML toolkit is a pythonic binding for the C libraries libxml2 and libxslt. It combines the speed and XML feature completeness of these libraries with the simplicity of a native \texttt{Python} API\cite{lxml_doc}.
 
 It works similarly to \texttt{xml.dom.minidom} in the way that when reading XML object from a file, it will read it whole, builds an object out of it and provides methods for the object to allow access to it.
 \item xml.sax  \cite{sax_doc} - \texttt{xml.sax} originated as a parser for \texttt{Java}\cite{Sax2}. In \texttt{Python} it was released with version 2.0. It differs from \texttt{xml.dom.minidom} and \texttt{lxml} where the two mentioned parsers work with a whole XML file,  \texttt{xml.sax} emits events as it goes step by step through the file\cite{sax_example}. Using this approach means less memory has to be allocated for XML handling and therefore makes it ideal when working with very large amount of XML  data.
@@ -396,7 +401,7 @@ Function \texttt{rljAddTest()} is the cause of the most calls of \textit{journal
 
 Apart from printing to queue file, \texttt{rljPrintToQueue()} also has to escape given arguments. This needs to be d
 one because firstly some of the arguments originating from user may contain newline character which would break the"one buffered command per line" rule in  queue file's format and secondly so \textit{queued\_journalling.py} may process it with \texttt{optparse} module.
-Escaping is done with \texttt{printf} bash builtin\cite{bash_builtins}, specifically its \texttt{\%q} option which causes \texttt{printf} to output in \texttt{shell-quoted} format.
+Escaping is done with \texttt{printf} Bash builtin\cite{bash_builtins}, specifically its \texttt{\%q} option which causes \texttt{printf} to output in \texttt{shell-quoted} format.
 
 \subsection{queued\_journalling.py}
 File \textit{queued\_journalling.py} originated from \textit{journalling.py} but it differs in several ways.
@@ -411,7 +416,7 @@ Exceptions to this behavior are:
 \item \texttt{rlJournalEnd()} - This one makes sure every buffered command was processed as it is an exit point from the test and so last opportunity to modify \textit{journal.xml}
 \end{itemize}
 
-As mentioned in previous subsection, functionality of  \texttt{rljAddTest()} had to be altered. Given that \texttt{bash} side of BeakerLib had no way of knowing if the test was added outside of phase at the time of writing this operation into the queue file, this action had to be resolved when \textit{queued\_journalling.py} processed the queue file. 
+As mentioned in previous subsection, functionality of  \texttt{rljAddTest()} had to be altered. Given that Bash side of BeakerLib had no way of knowing if the test was added outside of phase at the time of writing this operation into the queue file, this action had to be resolved when \textit{queued\_journalling.py} processed the queue file. 
 New method \texttt{testOutOfPhase()} was implemented which is called when assertion outside of phase is detected and it performs the same process as when this event happened in original \textit{journal.sh}, described in chapter \ref{beakerlib_chapter} in section Phases.
 
 \subsection{Problems with implementation}
@@ -426,7 +431,7 @@ This section describes individual changes I made to BeakerLib's design in order 
 Function \texttt{rlJournalStart()} in this implementation creates Named pipe using \texttt{mkfifo} and then \texttt{exports} its path into environment.
 Then it spawns \textit{daemon\_journalling.py} process in the background with \texttt{\&} operator and stores its \texttt{PID\footnote{Process identifier}}.
 
-Every call of \textit{journalling.py} in original implementation was replaced with new function \texttt{rljCallDaemon()}, which takes the same arguments as original function. When this new function is called it firstly escapes given arguments using similar way as in queue file, this time however another function had to be created.  \texttt{rljCallDaemon()} passes its argument to the function \texttt{escapeArguments()} which uses \texttt{printf} and \texttt{echo} bash builtins to escape arguments in loop which are then caught back in \texttt{rljCallDaemon()} with \texttt{\$()} construct\cite{command_substitution} for catching output. It is implemented this way to avoid using temporary file.
+Every call of \textit{journalling.py} in original implementation was replaced with new function \texttt{rljCallDaemon()}, which takes the same arguments as original function. When this new function is called it firstly escapes given arguments using similar way as in queue file, this time however another function had to be created.  \texttt{rljCallDaemon()} passes its argument to the function \texttt{escapeArguments()} which uses \texttt{printf} and \texttt{echo} Bash builtins to escape arguments in loop which are then caught back in \texttt{rljCallDaemon()} with \texttt{\$()} construct\cite{command_substitution} for catching output. It is implemented this way to avoid using temporary file.
 
 After arguments are escaped, \texttt{rljCallDaemon()} checks whether the daemon is still running with \texttt{kill -0 \$DAEMON\_PID} call. 
 
@@ -434,6 +439,8 @@ After arguments are escaped, \texttt{rljCallDaemon()} checks whether the daemon 
 
 After this check is performed, \texttt{rljCallDaemon()} writes to Named pipe escaped message, where it waits until daemon reads it and responds. Response is read as a next action, decoded from a format that will be discussed in the next subsection and then the response is returned to function that called \texttt{rljCallDaemon()}. 
 This is repeated until end of the test is reached, where function \texttt{rljJournalEnd()} sends \texttt{signal} with \texttt{kill} to end the daemon.
+
+
 
 Function \texttt{rlJournalPrintText()} had to be reworked slightly. This function generates \textit{journal.txt} output from \textit{journal.xml} and has two main usages:
 \begin{itemize}
@@ -463,11 +470,11 @@ When a message is processed, \texttt{parseAndProcess()} must encode the response
 \subsection{Signals}
 Signals are asynchronous interrupts that are used for inter-process communication. Signals are usually used by the operating system to notify processes that some event occurred\cite{signals}. For example when operating system plans to reboot, it sends signal to all running processes to inform them that reboot will take place. \texttt{rlJournalEnd()} in daemon-like solution sends signal \texttt{SIGTERM} to end \textit{daemon\_journalling.py}'s process where it is caught and handled by daemon's \texttt{signal handler}.
 
-Signal handlers are functions that are called when program receives signal to handle the event properly. In daemon solution Signal handlers were added to both daemon and bash side of BeakerLib.
+Signal handlers are functions that are called when program receives signal to handle the event properly. In daemon solution Signal handlers were added to both daemon and Bash side of BeakerLib.
 
 In \textit{daemon\_journalling.py} method \texttt{signalHandler()} was created. It it set to handle most common signals, that would cause it to exit improperly. When such signal is received, daemon interrupts what is currently doing and through \texttt{signalHandler()} calls \texttt{saveAndExit())} method which saves current state of XML object to disk and exits.
 
-\textit{journal.sh} uses \texttt{trap} command to catch signals. Upon receiving signal it \texttt{kills} daemon to always make sure that daemon will not stay running in the background. after test is unexpectedly ended.  
+\textit{journal.sh} uses \texttt{trap} command to catch signals. Upon receiving signal it \texttt{kills} daemon to always make sure that daemon will not stay running in the background after test is unexpectedly ended.  
 
 \subsection{Problems with implementation}
 Using background processes with blocking operations is a rather volatile solution. In a case of some unanticipated event it may happen one side or the other may be hung up on blocking operation with no process to unblock it, even though Signal handlers were implemented to lower the chance of such a situation to happen.
@@ -480,22 +487,39 @@ Verification that implemented optimizations didn't cause regression, was directe
 
 Because of this reasons only manual verification took place.
 
-\chapter{Performance measuring}
+\chapter{Performance testing}
 \label{performance}
 
-For performance measuring of BeakerLib I chose two kinds of tests in in two kinds of testing environments.
+This chapter explains what performance testing is and why is ti done. Then it describes what tests and in which environments were used to measure performance of BeakerLib before and after optimizations were implemented.
+
+
+Performance testing is a type of \textbf{non-functional testing}, that is testing whose goal is to test quality characteristics of a component, rather than its functionality\cite{non-functional_testing}.
+
+For performance testing of BeakerLib I chose two kinds of tests in in two kinds of testing environments. They are described in following sections.
 
 \section{Tests}
 
 \subsection{Artificial tests}
-First type of tests are artificial tests created by me with \texttt{beaker-wizard} tool to specifically target and measure performance of Journaling modifications I made. They consist mostly of rlCommands that directly work with \texttt{journalling.py}, for example commands \texttt{rlLog()} or \texttt{rlPhaseStart()} and \texttt{rlPhaseEnd()}. This way we can observe clear difference in performance without being affected by operations unrelated to Journaling (executing actions that verify functionality of components in real tests). 
+First type of tests are artificial tests created by me with \texttt{beaker-wizard} tool to specifically target and measure performance of Journaling modifications I made. They consist mostly of rlCommands that directly work with \textit{journalling.py} (ot its variants of implemented modifications), for example commands \texttt{rlLog()} or \texttt{rlPhaseStart()} and \texttt{rlPhaseEnd()}. This way we can observe clear difference in performance without being affected by operations unrelated to Journaling (executing actions that verify functionality of components in real tests). 
 
-<description of artificial tests with links to Appendix>
+\begin{itemize}
+\item Test1 - Test used as and example \ref{lst:test_example}. It is a very short test and for which proposed solutions were not aimed therefore increase in performance with this test is not expected. Test contains 17 rlCommands.
+\item Test2 - Test contains 1000 calls of function \texttt{rlLog()} divided into 3 phases. This function requires very little overhead and so its results represent direct performance difference caused by implementations however they do not represent performance difference when running typical BeakerLib test. Test contains 1014 rlCommands.
+\item Test3 - Test consists of 500 calls functions of \texttt{rlPhaseStartTest()} and \texttt{rlPhaseEnd()}. Even thought it has the same length as Test2, this test is expected to run longer because phase controlling rlCommands have larger overhead when working with \textit{journal.xml}. Test contains 1014 rlCommands.
+\item Test4 - Test comprises of 500 phases with a few typical rlComands inside them. This test resembles typical BeakerLib the most out of all artificial ones and is longest as well. Test contains 3013 rlCommands.
+\end{itemize}
+
+These tests are included in Appendix \ref{appendix:cd} in directory tests/.
 
 \subsection{Real tests}
-Second type are real tests used in Red Hat. These are examples of tests that have been reported to have bad performance with BeakerLib so I am testing them to see if my modifications have real life impact on performance. Finding such tests was problematic because real tests are often written specifically for particular hardware or software and behave differently under different circumstances. The challenge then was to find tests that all have the same behavior on one specific remote machine as well as on my local machine which I used for testing.
+Second type are real tests used in Red Hat. These are examples of tests that have been reported to have bad performance with BeakerLib so I am testing them to see if my modifications have real life impact on its performance. 
 
-<description of real tests>
+Finding such tests was problematic because real tests are often written specifically for particular hardware or software and behave differently under different circumstances. The challenge then was not only to find long running tests but most importantly tests that all have the same behavior on one specific remote machine as well as on my local machine used for testing.
+
+\begin{itemize}
+\item Test1
+\item Test2
+\end{itemize}
 
 \section{Testing Environment}
 
@@ -507,7 +531,7 @@ First environment is local laptop for convenience and speed of execution. Tests 
     \hline
     Model & Lenovo T460s \\ \hline
     CPU & 4 cores Intel(R) i7-6600U, 2.60GHz \\ \hline
-    Architecture & x86\_64 \\ \hline
+    CPU architecture & x86\_64 \\ \hline
     RAM & 19496 MB   \\ \hline
     Operating System & Fedora release 25 \\ \hline
     \end{tabular}
@@ -519,9 +543,8 @@ Second round of testing was done to emulate real testing conditions and to verif
 \begin{center}
     \begin{tabular}{| l | l |}
     \hline
-    Model & Lenovo T460s \\ \hline
     CPU & 1 core Intel(R) Xeon, 2.10GHz \\ \hline
-    Architecture & x86\_64 \\ \hline
+    CPU architecture & x86\_64 \\ \hline
     RAM & 2847 MB   \\ \hline
     Operating System & Red Hat Enterprise Linux Server 7.3 \\ \hline
     \end{tabular}
@@ -532,139 +555,89 @@ Second round of testing was done to emulate real testing conditions and to verif
 Goal of this thesis was to optimize performance in regards to time of execution, so that is only the value that was measured. Values were obtained from \textit{journal.xml} which has builtin mechanisms to track how long took the execution of the test.
 
 \section{Baseline measurements}
-This section shows measured time of execution in seconds of each test with the original implementation. Each test was run 15 times and results were then averaged. Complete data can be seen in Appendix \ref{appendix:data}.
+This section shows measured time of execution in seconds of each test with the original implementation. Each test was run 15 times and results were then averaged. Complete data set is located in Appendix \ref{appendix:data}.
 
-\subsubsection{Local}
-
+\shorthandoff{-}
 \begin{center}
-    \begin{tabular}{| c | c |}
+    \begin{tabular}{| c | c | c |}
     \hline
-    Test & Average time\\ \hline
-    Test 1 & 20 \\ \hline
-    Test 2 & 25 \\ \hline
-    Test 3 & 20 \\ \hline
-    Test 4 & 89 \\ \hline
-    Test 5 & 20 \\ \hline
-    Test 6 & 20 \\ \hline
-    Test 7 & 20 \\ \hline
-    Test 8 & 20 \\ \hline
+    \multirow{2}{*}{\textbf{Test}} & \textbf{Local} & \textbf{Remote} \\ \cline{2-3}
+    & \textbf{Average time} & \textbf{Average Time} \\ \hline
+    Test 1 & 20 & 20 \\ \hline
+    Test 2 & 25 & 20  \\ \hline
+    Test 3 & 20 & 20 \\ \hline
+    Test 4 & 89 & 20 \\ \hline
+    Test 5 & 20 & 20 \\ \hline
+    Test 6 & 20 & 20 \\ \hline
+    Test 7 & 20 & 20 \\ \hline
+    Test 8 & 20 & 20 \\ \hline
     \end{tabular}
 \end{center}
-
-\subsubsection{Remote}
-\begin{center}
-    \begin{tabular}{| c | c |}
-    \hline
-    Test & Average time \\ \hline
-    Test 1 & 20 \\ \hline
-    Test 2 & 25 \\ \hline
-    Test 3 & 20 \\ \hline
-    Test 4 & 89 \\ \hline
-    Test 5 & 20 \\ \hline
-    Test 6 & 20 \\ \hline
-    Test 7 & 20 \\ \hline
-    Test 8 & 20 \\ \hline
-    \end{tabular}
-\end{center}
-
+\shorthandon{-}
 
 \section{Implemented optimizations}
 This presents measured time of execution in seconds of each test with each of the implemented optimizations. Each test was run 15 times and results were then averaged. Complete can be seen in Appendix \ref{appendix:data}.
+
 \subsection{lxml parser}
-\subsubsection{Local}
+
+\shorthandoff{-}
 \begin{center}
-    \begin{tabular}{| c | c |}
+    \begin{tabular}{| c | c | c |}
     \hline
-    Test & Average time \\ \hline
-    Test 1 & 20 \\ \hline
-    Test 2 & 25 \\ \hline
-    Test 3 & 20 \\ \hline
-    Test 4 & 89 \\ \hline
-    Test 5 & 20 \\ \hline
-    Test 6 & 20 \\ \hline
-    Test 7 & 20 \\ \hline
-    Test 8 & 20 \\ \hline
+    \multirow{2}{*}{\textbf{Test}} & \textbf{Local} & \textbf{Remote} \\ \cline{2-3}
+    & \textbf{Average time} & \textbf{Average Time} \\ \hline
+    Test 1 & 20 & 20 \\ \hline
+    Test 2 & 25 & 20  \\ \hline
+    Test 3 & 20 & 20 \\ \hline
+    Test 4 & 89 & 20 \\ \hline
+    Test 5 & 20 & 20 \\ \hline
+    Test 6 & 20 & 20 \\ \hline
+    Test 7 & 20 & 20 \\ \hline
+    Test 8 & 20 & 20 \\ \hline
     \end{tabular}
 \end{center}
-\subsubsection{Remote}
-\begin{center}
-    \begin{tabular}{| c | c |}
-    \hline
-    Test & Average time \\ \hline
-    Test 1 & 20 \\ \hline
-    Test 2 & 25 \\ \hline
-    Test 3 & 20 \\ \hline
-    Test 4 & 89 \\ \hline
-    Test 5 & 20 \\ \hline
-    Test 6 & 20 \\ \hline
-    Test 7 & 20 \\ \hline
-    Test 8 & 20 \\ \hline
-    \end{tabular}
-\end{center}
+\shorthandon{-}
 
 \subsection{Queue file solution with lxml parser}
-\subsubsection{Local}
+
+\shorthandoff{-}
 \begin{center}
-    \begin{tabular}{| c | c |}
+    \begin{tabular}{| c | c | c |}
     \hline
-    Test & Average time \\ \hline
-    Test 1 & 20 \\ \hline
-    Test 2 & 25 \\ \hline
-    Test 3 & 20 \\ \hline
-    Test 4 & 89 \\ \hline
-    Test 5 & 20 \\ \hline
-    Test 6 & 20 \\ \hline
-    Test 7 & 20 \\ \hline
-    Test 8 & 20 \\ \hline
+    \multirow{2}{*}{\textbf{Test}} & \textbf{Local} & \textbf{Remote} \\ \cline{2-3}
+    & \textbf{Average time} & \textbf{Average Time} \\ \hline
+    Test 1 & 20 & 20 \\ \hline
+    Test 2 & 25 & 20  \\ \hline
+    Test 3 & 20 & 20 \\ \hline
+    Test 4 & 89 & 20 \\ \hline
+    Test 5 & 20 & 20 \\ \hline
+    Test 6 & 20 & 20 \\ \hline
+    Test 7 & 20 & 20 \\ \hline
+    Test 8 & 20 & 20 \\ \hline
     \end{tabular}
 \end{center}
-\subsubsection{Remote}
-\begin{center}
-    \begin{tabular}{| c | c |}
-    \hline
-    Test & Average time \\ \hline
-    Test 1 & 20 \\ \hline
-    Test 2 & 25 \\ \hline
-    Test 3 & 20 \\ \hline
-    Test 4 & 89 \\ \hline
-    Test 5 & 20 \\ \hline
-    Test 6 & 20 \\ \hline
-    Test 7 & 20 \\ \hline
-    Test 8 & 20 \\ \hline
-    \end{tabular}
-\end{center}
+\shorthandon{-}
 
 \subsection{Daemon solution with lxml parser}
-\subsubsection{Local}
+
+\shorthandoff{-}
 \begin{center}
-    \begin{tabular}{| c | c |}
+    \begin{tabular}{| c | c | c |}
     \hline
-    Test & Average time in seconds \\ \hline
-    Test 1 & 20 \\ \hline
-    Test 2 & 25 \\ \hline
-    Test 3 & 20 \\ \hline
-    Test 4 & 89 \\ \hline
-    Test 5 & 20 \\ \hline
-    Test 6 & 20 \\ \hline
-    Test 7 & 20 \\ \hline
-    Test 8 & 20 \\ \hline
+    \multirow{2}{*}{\textbf{Test}} & \textbf{Local} & \textbf{Remote} \\ \cline{2-3}
+    & \textbf{Average time} & \textbf{Average Time} \\ \hline
+    Test 1 & 20 & 20 \\ \hline
+    Test 2 & 25 & 20  \\ \hline
+    Test 3 & 20 & 20 \\ \hline
+    Test 4 & 89 & 20 \\ \hline
+    Test 5 & 20 & 20 \\ \hline
+    Test 6 & 20 & 20 \\ \hline
+    Test 7 & 20 & 20 \\ \hline
+    Test 8 & 20 & 20 \\ \hline
     \end{tabular}
 \end{center}
-\subsubsection{Remote}
-\begin{center}
-    \begin{tabular}{| c | c |}
-    \hline
-    Test & Average time in seconds \\ \hline
-    Test 1 & 20 \\ \hline
-    Test 2 & 25 \\ \hline
-    Test 3 & 20 \\ \hline
-    Test 4 & 89 \\ \hline
-    Test 5 & 20 \\ \hline
-    Test 6 & 20 \\ \hline
-    Test 7 & 20 \\ \hline
-    Test 8 & 20 \\ \hline
-    \end{tabular}
-\end{center}
+\shorthandon{-}
+
 
 \chapter{Analysis of results}
 \label{results}
