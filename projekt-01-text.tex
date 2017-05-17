@@ -276,17 +276,19 @@ This section describes a few of BeakerLib's source files, relevant to this thesi
 It was reported that BeakerLib suffers performance problems when running long tests. Time of processing each rlCommand grew longer after many (several hundreds and more) were used. Analysis of library was problematic due to lack of documentation, complex structure and uncommented code, however thorough investigation of the source code indicated that problem lies with generating \textit{journal.xml}. 
 
 Python script \textit{journalling.py} is called after each rlCommand to log its result into \textit{journal.xml}. This isn't big problem with small test as the \textit{journal.xml} file takes up only a few kilobytes, however when the file takes up dozens or hundreds of kilobytes, repeated loading the file from disk, parsing, adding a line of log and then saving the file back to the disk adds significantly more load to CPU\footnote{Central Processing Unit}. Running larger tests therefore becomes quite time consuming and considerably slows down testing as a whole.
-
 This has been determined as the main focus of the thesis since it probably is the most significant performance bottleneck. Influence of used Harness was thought  to be negligible and won't be focused on in this thesis.
-The next chapter describes proposed solutions with their pros and cons.
 
-Figure \ref{fig:rl_run} illustrates simplified version of how \texttt{rlRun()} propagates through different functions from BeakerLib files (which are \texttt{sourced} at the time test execution,  depicted by rounded rectangles) and how it is logged into the Journal. Similar operation is performed for every rlCommand in a test. Figure also reveals 
+Figure \ref{fig:rl_run} illustrates simplified version of how \texttt{rlRun()} propagates through different functions from BeakerLib files (which are \texttt{sourced} at the time test execution,  depicted by rounded rectangles) and how it is logged into the Journal. Figure also partially reveals complicated environment of BeakerLib, where every rlCommand is processed by many internal functions, making an understanding and developing BeakerLib difficult. 
 
-\begin{figure}
+\begin{figure}[h!]
   \includegraphics[width=\linewidth]{rl_run.png}
   \caption{Logging of rlRun to Journal}
   \label{fig:rl_run}
 \end{figure}
+
+
+The next chapter describes proposed solutions to analysed problem with their pros and cons.
+
 
 \chapter{Solution of Journaling problem}
 \label{solutions}
@@ -350,7 +352,7 @@ I chose to implement communication through Named pipes because synchronization i
 This chapter describes how the proposed solutions were implemented. Each solution has its own section that describes implementation details and obstacles that were found and had to be solved during the implementation.
 During changing of parsers I discovered and reported few bugs present in current implementation of \textit{journalling.py}.
 
-\section{Change of xml parser}
+\section{Change of XML parser}
 \subsection{Difference in parsers}
 As mentioned before I chose to change original XML parser to \texttt{lxml}. Only changes in source code were in file \textit{journalling.py} as it is only part of BeakerLib that directly works with journal's XML object. 
 Most of the changes were in \texttt{xml.dom.minidom's} method for creating new XML element and assigning value into it.
@@ -458,22 +460,23 @@ In \textit{daemon\_journalling.py} method \texttt{signalHandler()} was created. 
 \subsection{Problems with implementation}
 Using background processes with blocking operations is a rather volatile solution. In a case of some unanticipated event it may happen one side or the other may be hung up on blocking operation with no process to unblock it, even though Signal handlers were implemented to lower the chance of such a situation to happen.
 
-During testing of this solution I was not able to reproduce such behavior however testing on much larger scale would have be concluded to confirm it is unlikely such event happens.
+During testing of this solution such behavior was not reproduced. However testing on much larger scale, including different operating systems, CPU architectures and other testing conditions, would have be concluded to confirm it is unlikely such event could occur. 
 
+\section{Verification of solutions}
+Verification that implemented optimizations didn't cause regression, was directed on \textit{journal.xml} as it is a main focus point of this thesis. Due to its nature automated verification was problematic to implement, because two \textit{journal.xml} files generated from one test may differ in many ways while both still being valid (they may differentiate in such information as time of execution, hardware/software specifications or even in reported results, as test could pass or fail independently on BeakerLib implementation).
 
-
-\section{Verification of solutions} ??? 
+Because of this reasons only manual verification took place.
 
 \chapter{Performance measuring}
 \label{performance}
-<Definition of performance measuring>
+Performance measuremnet 
 
 For performance measuring of BeakerLib I chose two kinds of tests in in two kinds of testing environments.
 
 \section{Tests}
 
 \subsection{Artificial tests}
-First type of tests are artificial tests created by me with \texttt{beaker-wizard} tool to specifically target and measure performance of journaling modifications I made. They consist mostly of rlCommands that directly work with \texttt{journalling.py}. For example commands \texttt{rlLog()} or \texttt{rlPhaseStart()} and \texttt{rlPhaseEnd()}. This way we can observe clear difference in performance without being affected by operations unrelated to Journaling (executing actions that verify functionality of components in real tests). 
+First type of tests are artificial tests created by me with \texttt{beaker-wizard} tool to specifically target and measure performance of Journaling modifications I made. They consist mostly of rlCommands that directly work with \texttt{journalling.py}, for example commands \texttt{rlLog()} or \texttt{rlPhaseStart()} and \texttt{rlPhaseEnd()}. This way we can observe clear difference in performance without being affected by operations unrelated to Journaling (executing actions that verify functionality of components in real tests). 
 
 <description of artificial tests with links to Appendix>
 
@@ -485,22 +488,171 @@ Second type are real tests used in Red Hat. These are examples of tests that hav
 \section{Testing Environment}
 
 \subsection{Local}
-First environment is local laptop for convenience and speed of execution. Tests were run directly, without any harness and with these technical specifications. 
+First environment is local laptop for convenience and speed of execution. Tests were run directly, without any harness and with these technical specifications:  %??? psudoharness
 
-<table of tech specs>
+\begin{center}
+    \begin{tabular}{| l | l |}
+    \hline
+    Model & Lenovo T460s \\ \hline
+    CPU & 4 cores Intel(R) i7-6600U, 2.60GHz \\ \hline
+    Architecture & x86\_64 \\ \hline
+    RAM & 19496 MB   \\ \hline
+    Operating System & Fedora release 25 \\ \hline
+    \end{tabular}
+\end{center}
 
 \subsection{Remote in beaker}
-Second round of testing was done to emulate real testing conditions and to verify that changes made to BeakerLib do not break functionality outside of controlled environment. Tests were run with the default test harness Beah.
-<table of tech specs>
+Second round of testing was done to emulate real testing conditions and to verify that changes made to BeakerLib do not break functionality outside of controlled environment. Tests were run u the default test harness Beah. Technical specification were following:
 
-\section{Measured Values}
+\begin{center}
+    \begin{tabular}{| l | l |}
+    \hline
+    Model & Lenovo T460s \\ \hline
+    CPU & 1 core Intel(R) Xeon, 2.10GHz \\ \hline
+    Architecture & x86\_64 \\ \hline
+    RAM & 2847 MB   \\ \hline
+    Operating System & Red Hat Enterprise Linux Server 7.3 \\ \hline
+    \end{tabular}
+\end{center}
+
+
+\section{Measured Values} % ??? value
+Goal of this thesis was to optimize performance in regards to time of execution, so that is only the value that was measured. Values were obtained from \textit{journal.xml} which has builtin mechanisms to track how long took the execution of the test.
 
 \section{Baseline measurements}
-<results>
+This section shows measured time of execution in seconds of each test with the original implementation. Each test was run 15 times and results were then averaged. Complete data can be seen in Appendix \ref{appendix:data}.
+
+\subsubsection{Local}
+
+\begin{center}
+    \begin{tabular}{| c | c |}
+    \hline
+    Test & Average time\\ \hline
+    Test 1 & 20 \\ \hline
+    Test 2 & 25 \\ \hline
+    Test 3 & 20 \\ \hline
+    Test 4 & 89 \\ \hline
+    Test 5 & 20 \\ \hline
+    Test 6 & 20 \\ \hline
+    Test 7 & 20 \\ \hline
+    Test 8 & 20 \\ \hline
+    \end{tabular}
+\end{center}
+
+\subsubsection{Remote}
+\begin{center}
+    \begin{tabular}{| c | c |}
+    \hline
+    Test & Average time \\ \hline
+    Test 1 & 20 \\ \hline
+    Test 2 & 25 \\ \hline
+    Test 3 & 20 \\ \hline
+    Test 4 & 89 \\ \hline
+    Test 5 & 20 \\ \hline
+    Test 6 & 20 \\ \hline
+    Test 7 & 20 \\ \hline
+    Test 8 & 20 \\ \hline
+    \end{tabular}
+\end{center}
 
 
 \section{Implemented optimizations}
-<results>
+This presents measured time of execution in seconds of each test with each of the implemented optimizations. Each test was run 15 times and results were then averaged. Complete can be seen in Appendix \ref{appendix:data}.
+\subsection{lxml parser}
+\subsubsection{Local}
+\begin{center}
+    \begin{tabular}{| c | c |}
+    \hline
+    Test & Average time \\ \hline
+    Test 1 & 20 \\ \hline
+    Test 2 & 25 \\ \hline
+    Test 3 & 20 \\ \hline
+    Test 4 & 89 \\ \hline
+    Test 5 & 20 \\ \hline
+    Test 6 & 20 \\ \hline
+    Test 7 & 20 \\ \hline
+    Test 8 & 20 \\ \hline
+    \end{tabular}
+\end{center}
+\subsubsection{Remote}
+\begin{center}
+    \begin{tabular}{| c | c |}
+    \hline
+    Test & Average time \\ \hline
+    Test 1 & 20 \\ \hline
+    Test 2 & 25 \\ \hline
+    Test 3 & 20 \\ \hline
+    Test 4 & 89 \\ \hline
+    Test 5 & 20 \\ \hline
+    Test 6 & 20 \\ \hline
+    Test 7 & 20 \\ \hline
+    Test 8 & 20 \\ \hline
+    \end{tabular}
+\end{center}
+
+\subsection{Queue file solution with lxml parser}
+\subsubsection{Local}
+\begin{center}
+    \begin{tabular}{| c | c |}
+    \hline
+    Test & Average time \\ \hline
+    Test 1 & 20 \\ \hline
+    Test 2 & 25 \\ \hline
+    Test 3 & 20 \\ \hline
+    Test 4 & 89 \\ \hline
+    Test 5 & 20 \\ \hline
+    Test 6 & 20 \\ \hline
+    Test 7 & 20 \\ \hline
+    Test 8 & 20 \\ \hline
+    \end{tabular}
+\end{center}
+\subsubsection{Remote}
+\begin{center}
+    \begin{tabular}{| c | c |}
+    \hline
+    Test & Average time \\ \hline
+    Test 1 & 20 \\ \hline
+    Test 2 & 25 \\ \hline
+    Test 3 & 20 \\ \hline
+    Test 4 & 89 \\ \hline
+    Test 5 & 20 \\ \hline
+    Test 6 & 20 \\ \hline
+    Test 7 & 20 \\ \hline
+    Test 8 & 20 \\ \hline
+    \end{tabular}
+\end{center}
+
+\subsection{Daemon solution with lxml parser}
+\subsubsection{Local}
+\begin{center}
+    \begin{tabular}{| c | c |}
+    \hline
+    Test & Average time in seconds \\ \hline
+    Test 1 & 20 \\ \hline
+    Test 2 & 25 \\ \hline
+    Test 3 & 20 \\ \hline
+    Test 4 & 89 \\ \hline
+    Test 5 & 20 \\ \hline
+    Test 6 & 20 \\ \hline
+    Test 7 & 20 \\ \hline
+    Test 8 & 20 \\ \hline
+    \end{tabular}
+\end{center}
+\subsubsection{Remote}
+\begin{center}
+    \begin{tabular}{| c | c |}
+    \hline
+    Test & Average time in seconds \\ \hline
+    Test 1 & 20 \\ \hline
+    Test 2 & 25 \\ \hline
+    Test 3 & 20 \\ \hline
+    Test 4 & 89 \\ \hline
+    Test 5 & 20 \\ \hline
+    Test 6 & 20 \\ \hline
+    Test 7 & 20 \\ \hline
+    Test 8 & 20 \\ \hline
+    \end{tabular}
+\end{center}
 
 \chapter{Analysis of results}
 \label{results}
