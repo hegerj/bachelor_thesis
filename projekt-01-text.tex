@@ -507,20 +507,21 @@ Because of this reasons only manual verification took place.
 This chapter explains what performance testing is and why is ti done. Then it describes what tests and in which environments were used to measure performance of BeakerLib before and after optimizations were implemented.
 
 
-Performance testing is a type of \textbf{non-functional testing}, that is testing whose goal is to test quality characteristics of a component, rather than its functionality\cite{non-functional_testing}.
+Performance testing is a type of \textbf{non-functional testing}, that is testing whose goal is to test quality characteristics of a component, rather than its functionality\cite{non-functional_testing}.  %% ???
 
 For performance testing of BeakerLib two kinds of tests were chosen to run, in two kinds of testing environments. They are described in following sections.
 
 \section{Tests}
+\label{sec:tests}
 
 \subsection{Artificial tests}
 First type of tests are artificial tests created by \texttt{beaker-wizard} tool to specifically target and measure performance of Journaling modifications this thesis proposes. They consist mostly of rlCommands that directly work with \textit{journalling.py} (or its variants of implemented modifications), for example commands \texttt{rlLog()} or \texttt{rlPhaseStart()} and \texttt{rlPhaseEnd()}. This way we can observe clear difference in performance without being affected by operations unrelated to Journaling (executing actions that verify functionality of components in real tests). 
 
 \begin{itemize}
 \item Test1 - Test used as and example \ref{lst:test_example}. It is a very short test and for which proposed solutions were not aimed therefore increase in performance with this test is not expected. Test contains 17 rlCommands.
-\item Test2 - Test contains 1000 calls of function \texttt{rlLog()} divided into 3 phases. This function requires very little overhead and so its results represent direct performance difference caused by implementations however they do not represent performance difference when running typical BeakerLib test. Test contains 1014 rlCommands.
-\item Test3 - Test consists of 500 calls functions of \texttt{rlPhaseStartTest()} and \texttt{rlPhaseEnd()}. Even thought it has the same length as Test2, this test is expected to run longer because phase controlling rlCommands have larger overhead when working with \textit{journal.xml}. Test contains 1014 rlCommands.
-\item Test4 - Test comprises of 500 phases with a few typical rlComands inside them. This test resembles typical BeakerLib the most out of all artificial ones and is longest as well. Test contains 3013 rlCommands.
+\item Test2 - Test contains 1000 calls of function \texttt{rlLog()} divided into 3 phases. This function requires very little overhead and so its results represent direct performance difference caused by implementations however they do not represent performance difference when running typical BeakerLib test. Test contains 1014 rlCommands. Implementations using queue file and daemon one are expected to perform well on this test.
+\item Test3 - Test consists of 500 calls functions of \texttt{rlPhaseStartTest()} and \texttt{rlPhaseEnd()}. Even thought it has the same length as Test2, this test is expected to run longer because phase controlling rlCommands have larger overhead when working with \textit{journal.xml}. Test contains 1014 rlCommands. Daemon is predicted to have the best results while queue file solution may perform as badly as original implementation. 
+\item Test4 - Test comprises of 500 phases with a few typical rlComands inside them. This test resembles typical BeakerLib the most out of all artificial ones and is longest as well. Test contains 3013 rlCommands. This test should be run quickly with daemon solution.
 \end{itemize}
 
 These tests are included in Appendix \ref{appendix:cd} in directory tests/.
@@ -539,7 +540,7 @@ These tests are not included in Appendix as they are property of Red Hat.
 \section{Testing Environment}
 
 \subsection{Local}
-First environment is local laptop for convenience and speed of execution. Tests were run directly, without any harness and with these technical specifications:  %??? psudoharness
+First environment is local laptop for convenience and speed of execution. Tests were run directly, without any harness and with these technical specifications: 
 
 \begin{center}
     \begin{tabular}{| l | l |}
@@ -566,96 +567,84 @@ Second round of testing was done to emulate real testing conditions and to verif
 \end{center}
 
 
-\section{Measured Values} % ??? value
-Goal of this thesis was to optimize performance in regards to time of execution, so that is only the value that was measured. Values were obtained from \textit{journal.xml} which has builtin mechanisms to track how long took the execution of the test.
-
-\section{Baseline measurements}
-This section shows measured time of execution in seconds of each test with the original implementation. Each test was run 15 times and results were then averaged and rounded to precision of one decimal place. Complete data set is located in Appendix \ref{appendix:data}.
-
-\shorthandoff{-}
-\begin{center}
-    \begin{tabular}{| c | c | c |}
-    \hline
-    \multirow{2}{*}{\textbf{Test}} & \textbf{Local} & \textbf{Remote} \\ \cline{2-3}
-    & \textbf{Average time} & \textbf{Average Time} \\ \hline
-    Test 1 & 20 & 20 \\ \hline
-    Test 2 & 25 & 20  \\ \hline
-    Test 3 & 20 & 20 \\ \hline
-    Test 4 & 89 & 20 \\ \hline
-    Test 5 & 20 & 20 \\ \hline
-    Test 6 & 20 & 20 \\ \hline
-    Test 7 & 20 & 20 \\ \hline
-    Test 8 & 20 & 20 \\ \hline
-    \end{tabular}
-\end{center}
-\shorthandon{-}
-
-\section{Implemented optimizations}
-This presents measured time of execution in seconds of each test with each of the implemented optimizations. The same testing as with baseline measurements took place, that is each test was run 15 times and results were then averaged and rounded to precision of one decimal place. Complete data set can be seen in Appendix \ref{appendix:data}.
-
-\subsection{lxml parser}
-
-\shorthandoff{-}
-\begin{center}
-    \begin{tabular}{| c | c | c |}
-    \hline
-    \multirow{2}{*}{\textbf{Test}} & \textbf{Local} & \textbf{Remote} \\ \cline{2-3}
-    & \textbf{Average time} & \textbf{Average Time} \\ \hline
-    Test 1 & 20 & 20 \\ \hline
-    Test 2 & 25 & 20  \\ \hline
-    Test 3 & 20 & 20 \\ \hline
-    Test 4 & 89 & 20 \\ \hline
-    Test 5 & 20 & 20 \\ \hline
-    Test 6 & 20 & 20 \\ \hline
-    Test 7 & 20 & 20 \\ \hline
-    Test 8 & 20 & 20 \\ \hline
-    \end{tabular}
-\end{center}
-\shorthandon{-}
-
-\subsection{Queue file solution with lxml parser}
-
-\shorthandoff{-}
-\begin{center}
-    \begin{tabular}{| c | c | c |}
-    \hline
-    \multirow{2}{*}{\textbf{Test}} & \textbf{Local} & \textbf{Remote} \\ \cline{2-3}
-    & \textbf{Average time} & \textbf{Average Time} \\ \hline
-    Test 1 & 20 & 20 \\ \hline
-    Test 2 & 25 & 20  \\ \hline
-    Test 3 & 20 & 20 \\ \hline
-    Test 4 & 89 & 20 \\ \hline
-    Test 5 & 20 & 20 \\ \hline
-    Test 6 & 20 & 20 \\ \hline
-    Test 7 & 20 & 20 \\ \hline
-    Test 8 & 20 & 20 \\ \hline
-    \end{tabular}
-\end{center}
-\shorthandon{-}
-
-\subsection{Daemon solution with lxml parser}
-
-\shorthandoff{-}
-\begin{center}
-    \begin{tabular}{| c | c | c |}
-    \hline
-    \multirow{2}{*}{\textbf{Test}} & \textbf{Local} & \textbf{Remote} \\ \cline{2-3}
-    & \textbf{Average time} & \textbf{Average Time} \\ \hline
-    Test 1 & 20 & 20 \\ \hline
-    Test 2 & 25 & 20  \\ \hline
-    Test 3 & 20 & 20 \\ \hline
-    Test 4 & 89 & 20 \\ \hline
-    Test 5 & 20 & 20 \\ \hline
-    Test 6 & 20 & 20 \\ \hline
-    Test 7 & 20 & 20 \\ \hline
-    Test 8 & 20 & 20 \\ \hline
-    \end{tabular}
-\end{center}
-\shorthandon{-}
-
+\section{Measured Value} % ??? values
+Goal of this thesis was to optimize performance in regards to time of execution, so that is only the value that was measured. Values were obtained from \textit{journal.xml} which has builtin mechanisms to track how long took the execution of the test, with precision of one second, which should  be sufficient for needs of this measurement
 
 \chapter{Analysis of results}
 \label{results}
+This chapter compares measured values of executed tests under individual implementations and analyzes why they are that way.
+Each test described in previous chapter was run 15 times with each implementation in both devised environments. Measured results were averaged and rounded to precision of one decimal place. Complete data set is located in Appendix \ref{appendix:data}.
+
+\section{Tests}
+This sections analyzes measured results of individual tests. Each subsection is dedicated to a single test and it shows how the test performed on different implementations. Mostly only results from remote testing are shown as they are more important for this thesis.
+
+
+\subsection{Test1}
+As expected Test1 didn't reveal difference in performance, because drawbacks of original implementation become apparent only when \textit{journal.sh} reach certain size. Results can be seen in figure \ref{fig:remote_test1}.
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{remote_test1.png}
+  \caption{Test 1 results from remote testing}
+  \label{fig:remote_test1}
+\end{figure}
+
+\subsection{Test2}
+Test2 indicates big performance improvement when using queue file or daemon, however as discussed in section \ref{sec:tests}, this test may show big improvement in performance but will not necessarily be reflected in actual test runs. Queue file solution was able to achieve such speed because  the test contained minimal number operation that required immediate interaction with \textit{journal.sh} file which would be highly atypical for real test. Results are depicted in figure\ref{fig:remote_test2}.
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{remote_test2.png}
+  \caption{Test 2 results from remote testing}
+  \label{fig:remote_test2}
+\end{figure}
+
+\subsection{Test3}
+Test3 behaved in surprising manner. Slow performance of first three implementation was foreseeable, because this test is comprised of rlCommands constantly accessing \testit{journal.xml}. This problem was expected to be solved by daemon implementation however it performed almost as bad as other implementations as shown in figure \ref{fig:remote_test3}. Even stranger is that when tested locally it performed as expected which can be seen in figure \ref{fig:local_test3}. Explanation of this behavior was not fully understood at the time of writing this thesis. 
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{remote_test3.png}
+  \caption{Test 3 results from remote testing}
+  \label{fig:remote_test3}
+\end{figure}
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{local_test3.png}
+  \caption{Test 3 results from local testing}
+  \label{fig:local_test3}
+\end{figure}
+
+\subsection{Test4}
+Test4 performed predicted. High number of phases slowed down queue solution, which doesn't present obstacles to daemon, so it could perform better. Results are illustrated in figure\ref{fig:remote_test4}.
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{remote_test4.png}
+  \caption{Test 4 results from remote testing}
+  \label{fig:remote_test4}
+\end{figure}
+
+\subsection{Test5}
+First real test behaved is similar manner as Test4, slight improvements with each implementation, shown in figure \ref{fig:remote_test5}.
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{remote_test5.png}
+  \caption{Test 5 results from remote testing}
+  \label{fig:remote_test5}
+\end{figure}
+
+
+\subsection{Test6}
+Test6 performed against expectation as well as Test4. Daemon solution performed worst of all in both remote and local testing. Figure \ref{fig:remote_test6} represents measured data.
+
+\section{Validity of performance testing}
+Analysis of test results showed that implementations not always performed as expected. While with real tests argument can be made that those tests were poorly chosen, artificial tests were specifically created to test different aspects of BeakerLib performance in both local and remote testing. Another unexplained phenomenon emerged when studying complete sets. First runs of several tests performed as much as 2.5 times worse than rest of the runs. As if first run somehow made repeated runs faster to execute.
+These reason make validity of performance measurement questionable and warrant further, more thorough testing before solutions implemented for this thesis can be  incorporated into production code.
+
+Only consistent increase in performance was measured with change of XML parser to \texttt{lxml} which ranged between 
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{remote_test6.png}
+  \caption{Test 6 results from remote testing}
+  \label{fig:remote_test6}
+\end{figure}
 
 \chapter{Conclusion}
 \label{conclusion}
